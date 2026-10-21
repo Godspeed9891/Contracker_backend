@@ -31,11 +31,9 @@ talk to this server over the internet instead of to the browser's own storage.
     transfer letter / invoice / exit numbers, record a transporter, or touch
     invoices. A terminal's own Admin-department account may advance a job to
     any stage at its terminal, matching the frontend's own rule for that role.
-- **Not yet re-implemented server-side**: `activity-log`, `referrals`, and
-  `messages` still accept any write from a signed-in account, same as the
-  original static file — nobody is impersonable (that requires a valid
-  session), but role/terminal-based restrictions on those three, if you want
-  them, would need the same kind of field-diff check `containers` now has.
+- **Deleting / editing a job**: SCTL, or a terminal's own Admin department at its own terminal, can delete a job. Admin, Documentation and DTI at the job's terminal (and SCTL) can correct its container number, Bill of Lading, size, cargo description and destination. Anything else is refused with a plain-language message shown in a red banner.
+- **Who sees which jobs**: enforced by the server on every read, not just hidden on screen. A terminal's staff, importers and agents are sent only their own terminal's jobs (importers/agents only their own); SCTL sees every terminal; customs sees all but no staff-only comments; archived jobs go to SCTL and the terminal's Admin only. Cross-terminal duplicate registrations are detected by the server and sent as a flag (terminal names only). Importers and agents may only fill in a delivery location and upload (pending) invoices.
+- **Accounts, activity log, referrals, messages** are scoped the same way: a person is sent only the records they may see (importers and agents: their own account, referrals and conversations and no activity log; staff: what their role and terminal allow; ID-document images only to the Admin who verifies accounts), and every save is merged into the full list so a limited view can never overwrite or delete what it could not see. Nothing is deleted unless the app says so explicitly, so a screen that is a second out of date can no longer delete a just-added record. Ordinary staff cannot delete or edit history, messages or other people's referrals. Entries added by importers, agents or customs are limited to 5 per save, can't be marked as security alerts, and are always labelled with the author's real name. **Concurrent edits:** every job and account has a server-controlled version number; the apps tell the server which records they really edited, so a screen that is out of date can never overwrite other people's changes, and editing a record someone else just changed is refused with a clear message (the screen refreshes to the latest version).
 
 ## 1. Create a Postgres database
 
