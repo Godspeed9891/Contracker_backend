@@ -35,6 +35,7 @@ const http = require('http');
 const { WebSocketServer } = require('ws');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET;
@@ -514,6 +515,8 @@ function checkInvoiceAppend(prev, next, profile) {
   }
   return null;
 }
+// Importers and agents may add Bill of Lading, PAAR and Other documents to their own jobs — add only, under their own name.
+const CLIENT_DOC_TYPES = ['Bill of Lading', 'PAAR', 'Other'];
 function checkClientJobWrite(oldArr, newArr, profile) {
   const oldById = new Map(oldArr.map(c => [c.id, c]));
   if (newArr.length !== oldArr.length || newArr.some(c => !oldById.has(c.id))) return 'Importers and agents cannot add or remove jobs.';
@@ -521,8 +524,9 @@ function checkClientJobWrite(oldArr, newArr, profile) {
     const prev = oldById.get(c.id);
     for (const k of changedContainerKeys(prev, c)) {
       if (k === 'deliveryLocation') continue;
+      if (k === 'documents') continue; // checked in full by checkDocumentChanges
       if (k === 'invoices') { const err = checkInvoiceAppend(prev.invoices || [], c.invoices || [], profile); if (err) return err; continue; }
-      return 'Importers and agents can only update the delivery location and upload invoices (not the ' + labelOf(k) + ' on ' + c.containerNumber + ').';
+      return 'Importers and agents can only update the delivery location, upload invoices, and add a Bill of Lading, PAAR or Other document (not the ' + labelOf(k) + ' on ' + c.containerNumber + ').';
     }
   }
   return null;
@@ -664,6 +668,201 @@ function broadcastChanged(key) {
 }
 
 // ---------- routes ----------
+/* ================= Stored files + document rules =================
+   Uploaded documents and invoices are kept as real files in the database (table `files`), not just
+   as a filename. A job's document only points at the file (fileId); who may download it is decided
+   from the job, the same way the job itself is shown. Staff can reject a document the importer or
+   agent sent (with a reason), upload the right one on their behalf, and the importer or agent can
+   upload a corrected one against the rejected document. All of it is enforced here. */
+const FILE_MAX_BYTES = 10 * 1024 * 1024;
+const FILE_TYPES = {
+  pdf: 'application/pdf', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp',
+  doc: 'application/msword', docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  xls: 'application/vnd.ms-excel', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  csv: 'text/csv', txt: 'text/plain'
+};
+function fileExtOf(name) { const m = /\.([A-Za-z0-9]+)$/.exec(String(name || '')); return m ? m[1].toLowerCase() : ''; }
+function looksLikeType(ext, buf) {
+  const starts = (sig, off) => buf.length >= (off || 0) + sig.length && sig.every((b, i) => buf[(off || 0) + i] === b);
+  if (ext === 'pdf') return starts([0x25, 0x50, 0x44, 0x46]);
+  if (ext === 'png') return starts([0x89, 0x50, 0x4e, 0x47]);
+  if (ext === 'jpg' || ext === 'jpeg') return starts([0xff, 0xd8, 0xff]);
+  if (ext === 'webp') return starts([0x52, 0x49, 0x46, 0x46]) && starts([0x57, 0x45, 0x42, 0x50], 8);
+  if (ext === 'docx' || ext === 'xlsx') return starts([0x50, 0x4b]);
+  if (ext === 'doc' || ext === 'xls') return starts([0xd0, 0xcf, 0x11, 0xe0]);
+  return true; // csv / txt: plain text
+}
+async function fileMeta(id) {
+  if (typeof id !== 'string' || id.length > 80) return null;
+  const r = await pool.query('SELECT id, name, mime, size, uploaded_by FROM files WHERE id=$1', [id]);
+  return r.rows[0] || null;
+}
+
+app.post('/api/files', authRequired, express.raw({ type: () => true, limit: FILE_MAX_BYTES + 1024 }), async (req, res) => {
+  const name = String(req.query.name || '').replace(/[\\/\0]/g, '_').trim().slice(0, 200);
+  const ext = fileExtOf(name);
+  const body = req.body;
+  if (!name) return res.status(400).json({ error: 'The file needs a name.' });
+  if (!FILE_TYPES[ext]) return res.status(400).json({ error: 'That file type is not allowed. Use PDF, an image (PNG, JPG, WEBP), Word, Excel, CSV or text.' });
+  if (!Buffer.isBuffer(body) || body.length === 0) return res.status(400).json({ error: 'That file is empty.' });
+  if (body.length > FILE_MAX_BYTES) return res.status(413).json({ error: 'That file is larger than 10 MB.' });
+  if (!looksLikeType(ext, body)) return res.status(400).json({ error: 'That file does not look like a real .' + ext + ' file.' });
+  const id = crypto.randomUUID();
+  await pool.query(
+    'INSERT INTO files (id, name, mime, size, data, uploaded_by) VALUES ($1,$2,$3,$4,$5,$6)',
+    [id, name, FILE_TYPES[ext], body.length, body, req.user.id]
+  );
+  res.json({ id, name, mime: FILE_TYPES[ext], size: body.length });
+});
+
+app.get('/api/files/:id', authRequired, async (req, res) => {
+  const r = await pool.query('SELECT id, name, mime, size, data, uploaded_by FROM files WHERE id=$1', [String(req.params.id).slice(0, 80)]);
+  if (!r.rows.length) return res.status(404).json({ error: 'That file was not found.' });
+  const f = r.rows[0];
+  let ok = f.uploaded_by === req.user.id;
+  if (!ok) {
+    const profile = await profileOf(req.user);
+    const full = (await kvGet('containers')) || [];
+    const msgs = (await kvGet('messages')) || [];
+    ok = msgs.some(m => m && m.fileId === f.id && channelAllowed(req.user, profile, m.channel, m));
+    if (!ok) ok = full.some(c => jobVisibleTo(req.user, profile, c) &&
+      ((c.documents || []).some(d => d && d.fileId === f.id) || (c.invoices || []).some(i => i && i.fileId === f.id)));
+  }
+  if (!ok) return res.status(403).json({ error: 'You do not have access to that file.' });
+  const ascii = f.name.replace(/[^\x20-\x7e]/g, '_').replace(/"/g, '');
+  res.set({
+    'Content-Type': f.mime,
+    'Content-Length': String(f.data.length),
+    'Content-Disposition': `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(f.name)}`,
+    'Cache-Control': 'private, no-store'
+  });
+  res.end(f.data);
+});
+
+const STAFF_DOC_TYPES = ['Transfer Letter', 'Landing Certificate', 'Inspection Act', 'Exit Note', 'Gate Pass', 'PAAR', 'Bill of Lading',
+  'Duty Receipt', 'Manifest', 'SGD', 'Assessment Notice', 'SON Remita Payment Receipt', 'Other'];
+const DOC_FIELDS = new Set(['id', 'name', 'type', 'uploadedBy', 'uploadedByRole', 'date', 'sizeKB', 'fileId', 'mime', 'onBehalfOf', 'replaces', 'rejected']);
+function withoutKeys(o, keys) { const x = Object.assign({}, o); for (const k of keys) delete x[k]; return x; }
+function isClientDocOf(c, d) {
+  if (d.uploadedByRole === 'importer' || d.uploadedByRole === 'agent') return true;
+  return !d.uploadedByRole && (d.uploadedBy === c.owner || d.uploadedBy === c.agent);
+}
+
+// Rules for every change to a job's documents (and the files behind documents and invoices).
+// Returns null if fine, or a plain-language reason.
+async function checkDocumentChanges(oldArr, newArr, user, profile) {
+  const oldById = new Map(oldArr.map(c => [c.id, c]));
+  const isClient = user.role === 'importer' || user.role === 'agent';
+  for (const c of newArr) {
+    const prev = oldById.get(c.id);
+    if (!prev) continue;
+    const pd = Array.isArray(prev.documents) ? prev.documents : [];
+    const nd = Array.isArray(c.documents) ? c.documents : [];
+    const label = c.containerNumber;
+
+    // new invoice files must really exist and be the uploader's own
+    const prevInv = new Set((prev.invoices || []).map(i => i && i.id));
+    for (const inv of (c.invoices || [])) {
+      if (!inv || prevInv.has(inv.id) || !inv.fileId) continue;
+      const f = await fileMeta(inv.fileId);
+      if (!f) return 'The invoice file was not found on the server. Upload it again.';
+      if (f.uploaded_by !== user.id) return 'That invoice file was uploaded by someone else.';
+    }
+
+    if (deepEqual(pd, nd)) continue;
+    if (nd.length < pd.length) return 'Documents cannot be removed from ' + label + '.';
+
+    for (let i = 0; i < pd.length; i++) {
+      const p = pd[i], n = nd[i];
+      if (deepEqual(p, n)) continue;
+      if (!n || typeof n !== 'object') return 'Invalid document.';
+      if (p.id && n.id !== p.id) return 'Existing documents cannot be changed. Upload the corrected one instead.';
+      const n2 = withoutKeys(n, ['rejected']);
+      if (!deepEqual(withoutKeys(p, ['id']), withoutKeys(n2, ['id']))) return 'Existing documents cannot be changed. Upload the corrected one instead.';
+      if (!n.rejected) {
+        if (isClient) return 'Existing documents cannot be changed. Upload the corrected one instead.';
+        continue; // staff giving an older document an id so it can be tracked
+      }
+      if (p.rejected) return 'That document is already rejected.';
+      if (isClient) return 'Only BILBT staff can reject a document.';
+      if (!isSctl(user) && !FEN_BOL_DEPTS.includes(user.department)) return 'Only Admin, Documentation or DTI staff can reject a document.';
+      if (!isClientDocOf(c, p)) return 'Only a document sent by the importer or agent can be rejected.';
+      if (typeof n.id !== 'string' || !n.id) return 'Invalid document.';
+      const r = n.rejected;
+      if (!r || typeof r !== 'object' || Object.keys(r).some(k => !['by', 'date', 'reason'].includes(k))) return 'Invalid rejection.';
+      if (typeof r.reason !== 'string' || r.reason.trim().length < 3 || r.reason.length > 500) return 'Say what is wrong with the document (at least a few words) when rejecting it.';
+      if (!profile || r.by !== profile.name) return 'The rejection must be recorded under your own name.';
+      if (nd.some(x => x && x.replaces === n.id)) return 'That document has already been replaced.';
+    }
+
+    const added = nd.slice(pd.length);
+    if (added.length > 5) return 'Too many documents in one go.';
+    const ids = new Set(nd.slice(0, pd.length).map(d => d && d.id).filter(Boolean));
+    for (const d of added) {
+      if (!d || typeof d !== 'object') return 'Invalid document.';
+      if (Object.keys(d).some(k => !DOC_FIELDS.has(k))) return 'Invalid document.';
+      if (d.rejected) return 'A new document cannot start out rejected.';
+      if (typeof d.id !== 'string' || !d.id || d.id.length > 60 || ids.has(d.id)) return 'Invalid document.';
+      ids.add(d.id);
+      if (typeof d.name !== 'string' || !d.name || d.name.length > 200) return 'Invalid document.';
+      if (!profile || d.uploadedBy !== profile.name) return 'A document must be uploaded under your own name.';
+      if (d.uploadedByRole !== (isClient ? user.role : 'staff')) return 'Invalid document.';
+      if (isClient) {
+        if (!CLIENT_DOC_TYPES.includes(d.type)) return 'Importers and agents can only upload a Bill of Lading, a PAAR, or Other documents.';
+      } else if (!STAFF_DOC_TYPES.includes(d.type)) return 'Unknown document type.';
+      if (!d.fileId) return 'Choose the file to upload — a document must come with its file.';
+      const f = await fileMeta(d.fileId);
+      if (!f) return 'The file was not found on the server. Upload it again.';
+      if (f.uploaded_by !== user.id) return 'That file was uploaded by someone else.';
+      if (d.onBehalfOf !== undefined && d.onBehalfOf !== null) {
+        if (isClient) return 'Only BILBT staff can upload on behalf of someone else.';
+        if (!isSctl(user) && !FEN_BOL_DEPTS.includes(user.department)) return 'Only Admin, Documentation or DTI staff can upload on behalf of an importer or agent.';
+        if (d.onBehalfOf !== c.owner && d.onBehalfOf !== c.agent) return 'You can only upload on behalf of the importer or agent on this job.';
+      }
+      if (d.replaces) {
+        const target = nd.slice(0, pd.length).find(x => x && x.id === d.replaces);
+        if (!target || !target.rejected) return 'You can only replace a document that has been rejected.';
+        if (nd.some(x => x !== d && x && x.replaces === d.replaces)) return 'That rejected document has already been replaced.';
+        if (d.type !== target.type) return 'The replacement has to be the same kind of document.';
+        if (isClient && target.uploadedBy !== profile.name) return 'You can only replace your own rejected documents.';
+      }
+    }
+  }
+  return null;
+}
+
+
+// A chat message may carry one attached file: it must be a real stored file the sender uploaded.
+async function checkMessageFiles(full, parsed, user) {
+  const fullIds = new Set(full.map(m => m.id));
+  let n = 0;
+  for (const m of parsed) {
+    if (fullIds.has(m.id) || !m.fileId) continue;
+    if (++n > 5) return 'Too many attachments in one go.';
+    if (typeof m.fileId !== 'string') return 'Invalid attachment.';
+    const f = await fileMeta(m.fileId);
+    if (!f) return 'The attached file was not found on the server. Attach it again.';
+    if (f.uploaded_by !== user.id) return 'That file was uploaded by someone else.';
+  }
+  return null;
+}
+
+async function cleanupOrphanFiles() {
+  try {
+    const full = await kvGet('containers');
+    if (!Array.isArray(full)) return;
+    const used = new Set();
+    for (const m of ((await kvGet('messages')) || [])) if (m && m.fileId) used.add(m.fileId);
+    for (const c of full) {
+      for (const d of (c.documents || [])) if (d && d.fileId) used.add(d.fileId);
+      for (const i of (c.invoices || [])) if (i && i.fileId) used.add(i.fileId);
+    }
+    const r = await pool.query("SELECT id FROM files WHERE created_at < now() - interval '1 day'");
+    const gone = r.rows.map(x => x.id).filter(id => !used.has(id));
+    if (gone.length) await pool.query('DELETE FROM files WHERE id = ANY($1)', [gone]);
+  } catch (e) { console.error('file cleanup failed:', e.message); }
+}
+
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 // Two modes:
@@ -904,6 +1103,10 @@ app.put('/api/storage/:key', async (req, res) => {
     const mineIds = new Set(parsed.map(x => x.id));
     const err = replaceAll ? null : await checkContainersWrite(oldView, parsed, user, profile);
     if (err) return res.status(403).json({ error: err });
+    if (!replaceAll) {
+      const derr = await checkDocumentChanges(oldView, parsed, user, profile);
+      if (derr) return res.status(403).json({ error: derr });
+    }
     parsed = mergeContainers(full, oldView, parsed, user);
     for (const x of parsed) if (mineIds.has(x.id)) versions[x.id] = x._v;
   } else if (['activity-log', 'referrals', 'messages'].includes(key)) {
@@ -914,6 +1117,7 @@ app.put('/api/storage/:key', async (req, res) => {
       parsed = mergeLog(full, parsed, user, wantsReplace(req.body, user), await profileOf(user));
     } else {
       const profile = await profileOf(user);
+      if (key === 'messages') { const fe = await checkMessageFiles(full, parsed, user); if (fe) return res.status(403).json({ error: fe }); }
       const r = key === 'referrals' ? checkAndMergeReferrals(full, parsed, user, profile, req.body) : checkAndMergeMessages(full, parsed, user, profile, req.body);
       if (r.error) return res.status(403).json({ error: r.error });
       parsed = r.merged;
@@ -927,8 +1131,16 @@ app.put('/api/storage/:key', async (req, res) => {
   res.json({ ok: true, versions });
 });
 
+app.use((err, req, res, next) => {
+  if (err && err.type === 'entity.too.large') return res.status(413).json({ error: 'That is too large to upload (files can be up to 10 MB).' });
+  console.error(err);
+  res.status(err && err.status ? err.status : 500).json({ error: 'Something went wrong on the server. Please try again.' });
+});
+
 initSchema()
   .then(() => {
+    setTimeout(cleanupOrphanFiles, 60 * 1000).unref();
+    setInterval(cleanupOrphanFiles, 6 * 3600 * 1000).unref();
     server.listen(PORT, () => console.log(`ConTracker backend listening on :${PORT}`));
   })
   .catch(err => {

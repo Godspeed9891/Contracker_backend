@@ -18,3 +18,14 @@ CREATE TABLE IF NOT EXISTS kv_store (
   value      JSONB NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Real uploaded files (documents, invoices). The job record only holds a pointer (fileId) to a row here.
+CREATE TABLE IF NOT EXISTS files (
+  id          TEXT PRIMARY KEY,
+  name        TEXT NOT NULL,
+  mime        TEXT NOT NULL,
+  size        INTEGER NOT NULL,
+  data        BYTEA NOT NULL,
+  uploaded_by TEXT NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
