@@ -996,6 +996,52 @@ app.post('/api/auth/reset-seed-credentials', authRequired, async (req, res) => {
   res.json({ ok: true });
 });
 
+// Admin only: put back any starter (demo) accounts that are missing on this server, without touching accounts that exist.
+// A missing profile is added; a missing password is set to the starter password. Existing passwords are never changed.
+app.post('/api/auth/restore-demo-accounts', authRequired, async (req, res) => {
+  const myTerminal = req.user.terminalId;
+  if (!isSctl(req.user) && !isTerminalAdmin(req.user)) return res.status(403).json({ error: 'Only SCTL or a terminal Admin can restore demo accounts.' });
+  const { accounts, users: profiles } = req.body || {};
+  if (!Array.isArray(accounts) || !Array.isArray(profiles)) return res.status(400).json({ error: 'accounts[] and users[] are required.' });
+  const addedProfiles = [], fixedPasswords = [];
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const row = await client.query('SELECT value FROM kv_store WHERE key=$1 FOR UPDATE', ['users']);
+    if (!row.rows.length) { await client.query('ROLLBACK'); return res.status(503).json({ error: 'The server has not been set up yet.' }); }
+    const users = row.rows[0].value || [];
+    for (const a of accounts) {
+      if (!a || !a.id || !a.email || typeof a.password !== 'string' || a.password.length < 6) continue;
+      const mail = String(a.email).toLowerCase();
+      const p = profiles.find(x => x && x.id === a.id);
+      if (!isSctl(req.user) && (!p || p.terminalId !== myTerminal || p.role === 'sctl' || p.role === 'customs')) continue;
+      let u = users.find(x => x.id === a.id || String(x.login || '').toLowerCase() === mail);
+      if (!u) {
+        if (!p || !['importer', 'agent', 'admin', 'customs', 'sctl'].includes(p.role)) continue;
+        u = Object.assign({}, p, { id: a.id, login: String(a.email), status: 'active' });
+        delete u.password;
+        users.push(u); addedProfiles.push(u.name || mail);
+      }
+      const cred = await client.query('SELECT 1 FROM credentials WHERE email=$1', [mail]);
+      if (!cred.rows.length) {
+        const hash = await bcrypt.hash(a.password, 10);
+        await client.query('INSERT INTO credentials (email, password_hash, user_id) VALUES ($1,$2,$3)', [mail, hash, u.id]);
+        fixedPasswords.push(mail);
+      }
+    }
+    if (addedProfiles.length) {
+      await client.query("INSERT INTO kv_store (key, value, updated_at) VALUES ('users', $1, now()) ON CONFLICT (key) DO UPDATE SET value=$1, updated_at=now()", [JSON.stringify(users)]);
+    }
+    await client.query('COMMIT');
+  } catch (e) {
+    try { await client.query('ROLLBACK'); } catch (_) {}
+    console.error('restore demo accounts failed:', e);
+    return res.status(500).json({ error: 'Could not restore the accounts. Please try again.' });
+  } finally { client.release(); }
+  if (addedProfiles.length) broadcastChanged('users');
+  res.json({ ok: true, addedProfiles, fixedPasswords });
+});
+
 app.post('/api/bootstrap-demo-data', async (req, res) => {
   const existingUsers = await kvGet('users');
   if (existingUsers !== null) return res.status(409).json({ error: 'Already initialized.' });
