@@ -27,19 +27,43 @@ Checked by running the original and this version side by side on the same reques
 roles, scoped reads, container writes and conflicts, registration, password reset, file upload and
 download, 25 MB limit, malformed JSON, WebSocket push). Responses were identical.
 
+## Step 2 (done): auth
+
+| New file | Came from original | Note |
+|---|---|---|
+| `src/routes/auth.routes.js` | new (paths from 876, 949, 967, 987, 1001) | the five `/api/auth/*` URLs and their `authRequired` guards |
+| `src/controllers/auth.controller.js` | 868-1043 | register, login, setPassword, resetSeedCredentials, restoreDemoAccounts; bodies unchanged, still holding their own SQL and rules for now |
+| `src/middleware/auth.js` | 73-84 | authOptional, authRequired |
+| `src/utils/token.js` | 70-72 | signToken |
+| `src/policies/role.policy.js` | 85-86 | isSctl, isTerminalAdmin |
+| `src/models/user.model.js` | 461-464 | profileOf |
+
+Checked with 75 side-by-side requests against the original, using your real `schema.sql`. That includes
+the success paths of reset-seed-credentials, restore-demo-accounts and terminal-admin set-password.
+
+## Run it locally
+
+1. `npm install`
+2. Copy `.env.example` to `.env` and fill in `DATABASE_URL` and `JWT_SECRET`
+   (for a Postgres on your own machine also set `PGSSLMODE=disable`).
+3. `npm run dev` (Node 20.6 or newer; it loads `.env` itself because the code reads `process.env` directly).
+4. Open http://localhost:4000/api/health and you should see `{"ok":true}`.
+
+On Render or Railway, set the same variables in the dashboard and run `npm start`.
+
 ## Next steps, in order
 
-2. Auth: `signToken`, `authOptional`, `authRequired`, `isSctl`, `isTerminalAdmin`, `profileOf`, the five `/api/auth/*` routes
-3. Constants: roles, departments, stage rules, field labels
-4. Policies: visibility and write-permission functions (user, terminal, container, document, message, referral, log)
-5. Collections one at a time through `/api/storage/:key`: users, terminals, containers, then activity-log, referrals, messages (service per collection, views for redaction)
-6. Files and documents: `/api/files`, `checkDocumentChanges`, `cleanupOrphanFiles`
-7. Bootstrap/demo routes, then `legacy.routes.js` is deleted
+3. Constants and policies: roles, departments, stage rules, field labels; the visibility and write-permission functions (user, terminal, container, document, message, referral, log) into `policies/`
+4. Collections one at a time through `/api/storage/:key`: users, terminals, containers, then activity-log, referrals, messages (service per collection, views for redaction)
+5. Files and documents: `/api/files`, `checkDocumentChanges`, `cleanupOrphanFiles`
+6. Health and bootstrap routes, then `legacy.routes.js` is deleted
+7. Thin the controllers: SQL into `models/`, rules into `services/` (auth first)
+8. Optional, on its own: convert to ES modules (`"type": "module"`). It touches every file (`require` to `import`,
+   `.js` extensions, no `__dirname`), so it gets its own step and the same side-by-side check.
 
 ## Still needed from you
 
-- `schema.sql` (the tables `kv_store`, `credentials` and `files`). The server will not start without it at the project root.
-- Your `package.json`, so dependency versions match what you run today. Express is pinned to 4.x here.
+- Your `package.json`, so dependency versions match what you run today. Express is pinned to 4.x here and npm picked the newest bcryptjs, helmet, pg and ws.
 
 ## Noticed, not fixed (original line numbers)
 
