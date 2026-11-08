@@ -22,7 +22,8 @@ async function writeContainers({ user, body, parsed }) {
   if (parsed.some(c => fullIds.has(c.id) && !visibleIds.has(c.id))) {
     return refuse(403, 'One of those jobs belongs to a record you do not have access to.');
   }
-  const replaceAll = wantsReplace(body, user);
+  if (wantsReplace(body, user)) return refuse(403, 'SCTL can view jobs but cannot change them. Only the bonded terminal\'s own staff can.');
+  const replaceAll = false;
   if (!replaceAll) {
     const changed = changedIdSet(body, parsed);
     parsed = applyChangedOnly(oldView, parsed, changed);

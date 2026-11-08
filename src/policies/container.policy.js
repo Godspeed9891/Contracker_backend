@@ -91,7 +91,16 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
       }
     }
   }
-  if (isSctl(authUser)) return null;
+  if (isSctl(authUser)) {
+    // SCTL oversees every terminal: it may look at any job but never change one. Only the terminal's own staff do that.
+    const oldIds = new Set(oldArr.map(c => c.id));
+    const sameSet = newArr.length === oldArr.length && newArr.every(c => oldIds.has(c.id));
+    const oldById = new Map(oldArr.map(c => [c.id, c]));
+    if (!sameSet || newArr.some(c => changedContainerKeys(oldById.get(c.id), c).length)) {
+      return 'SCTL can view jobs but cannot change them. Only the bonded terminal\'s own staff can.';
+    }
+    return null;
+  }
   if (authUser.role === 'importer' || authUser.role === 'agent') return checkClientJobWrite(oldArr, newArr, profile);
   if (authUser.role !== 'admin') return 'Only bonded terminal staff accounts can change job records.';
 
