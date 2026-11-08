@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/terminals"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenSctl}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"t1\",\"name\":\"Lagos Bonded Terminal\",\"address\":\"Apapa, Lagos\",\"status\":\"active\"},{\"id\":\"t2\",\"name\":\"Tin Can Terminal\",\"address\":\"Tin Can, Lagos\",\"status\":\"active\"}]"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 3000

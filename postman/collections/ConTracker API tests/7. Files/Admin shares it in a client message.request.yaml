@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/messages"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenAdmin}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"m3\",\"from\":\"Ade Admin\",\"channel\":\"client:Imp Ortr\",\"text\":\"See attached\",\"fileId\":\"{{fileId}}\"}]"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 7000

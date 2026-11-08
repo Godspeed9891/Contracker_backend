@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/bootstrap-demo-data"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "collections": {},
+      "accounts": []
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 409", function () { pm.response.to.have.status(409); });
+    language: text/javascript
+order: 3000

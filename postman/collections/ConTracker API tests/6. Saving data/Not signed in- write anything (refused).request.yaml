@@ -1,0 +1,17 @@
+$kind: http-request
+name: "Not signed in: write anything (refused)"
+url: "{{baseUrl}}/api/storage/whatever"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "{\"a\":1}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 401", function () { pm.response.to.have.status(401); });
+    language: text/javascript
+order: 14000

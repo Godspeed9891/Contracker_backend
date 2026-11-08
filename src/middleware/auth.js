@@ -1,14 +1,14 @@
-// Moved verbatim from the original server.js (lines 73-84): reads the Bearer token.
-// authOptional returns the token's payload or null; authRequired answers 401 if there is none.
+// Reads the Bearer token (originally server.js lines 73-84).
+// authOptional returns the signed-in person (checked against their current account, see utils/token.js) or null;
+// authRequired answers 401 if there is none.
 
-const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config/env');
+const { userFromToken } = require('../utils/token');
 
 function authOptional(req) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return null;
-  try { return jwt.verify(token, JWT_SECRET); } catch (e) { return null; }
+  return userFromToken(token);
 }
 function authRequired(req, res, next) {
   const user = authOptional(req);

@@ -1,0 +1,16 @@
+$kind: http-request
+url: "{{baseUrl}}/api/files?name=virus.exe"
+method: POST
+headers:
+  Authorization: Bearer {{tokenAdmin}}
+  Content-Type: text/plain
+queryParams:
+  name: virus.exe
+body:
+  type: text
+  content: MZ...
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 400", function () { pm.response.to.have.status(400); });
+    language: text/javascript
+order: 2000

@@ -330,7 +330,13 @@ function checkUsersWrite(oldArr, newArr, authUser) {
   if (isSctl(authUser)) return null; // SCTL can do anything
 
   const oldById = new Map(oldArr.map(u => [u.id, u]));
-  const newById = new Map(newArr.map(u => [u.id, u]));
+   const newById = new Map(newArr.map(u => [u.id, u]));
+
+  for (const [id, newU] of newById) {
+    const oldU = oldById.get(id);
+    if (newU.role === 'sctl' && (!oldU || oldU.role !== 'sctl')) return 'Only SCTL can give someone the SCTL role.';
+    if (oldU && id === authUser.id && protectedFieldChanged(oldU, newU)) return 'You cannot change your own role, department, terminal or status.';
+  }
 
   if (isTerminalAdmin(authUser)) {
     // May add, edit, suspend, or remove accounts at their OWN terminal only.

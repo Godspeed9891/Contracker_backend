@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/restore-demo-accounts"
+method: POST
+headers:
+  Authorization: Bearer {{tokenImp}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "accounts": [],
+      "users": []
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 403", function () { pm.response.to.have.status(403); });
+    language: text/javascript
+order: 6000

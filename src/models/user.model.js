@@ -8,4 +8,10 @@ async function profileOf(user) {
   return users.find(u => u.id === user.id) || null;
 }
 
-module.exports = { profileOf };
+// Finds one account profile by id in the stored `users` collection (undefined when there is none).
+async function findUserById(id) {
+  const users = (await kvGet('users')) || [];
+  return users.find(u => u.id === id);
+}
+
+module.exports = { profileOf, findUserById };

@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/users"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenAdmin}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"u-admin\",\"name\":\"Ade Admin\",\"login\":\"admin@test.com\",\"role\":\"sctl\",\"department\":\"Admin\",\"terminalId\":\"t1\",\"status\":\"active\"}]",
+      "changed": [
+        "u-admin"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 403", function () { pm.response.to.have.status(403); });
+    language: text/javascript
+order: 2000

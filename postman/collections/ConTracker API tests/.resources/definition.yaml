@@ -1,0 +1,5 @@
+$kind: collection
+description: "Run the folders in order, top to bottom, against an EMPTY database. Start the server first: npm run dev."
+variables:
+  baseUrl: http://localhost:4000
+  tokenSctl: ""

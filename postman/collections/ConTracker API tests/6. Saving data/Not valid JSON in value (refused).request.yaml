@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/messages"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenAdmin}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "{broken"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 400", function () { pm.response.to.have.status(400); });
+    language: text/javascript
+order: 15000

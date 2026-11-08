@@ -1,0 +1,23 @@
+$kind: http-request
+url: "{{baseUrl}}/api/auth/register"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "id": "u-new2",
+      "email": "new@test.com",
+      "password": "password123",
+      "profile": {
+        "name": "Again",
+        "role": "importer",
+        "terminalId": "t1"
+      }
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 409", function () { pm.response.to.have.status(409); });
+    language: text/javascript
+order: 2000

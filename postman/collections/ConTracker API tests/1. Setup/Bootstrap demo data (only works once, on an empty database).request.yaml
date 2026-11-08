@@ -1,0 +1,89 @@
+$kind: http-request
+url: "{{baseUrl}}/api/bootstrap-demo-data"
+method: POST
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "collections": {
+        "users": [
+          {
+            "id": "u-sctl",
+            "name": "Platform Admin",
+            "login": "sctl@test.com",
+            "role": "sctl",
+            "status": "active"
+          },
+          {
+            "id": "u-admin",
+            "name": "Ade Admin",
+            "login": "admin@test.com",
+            "role": "admin",
+            "department": "Admin",
+            "terminalId": "t1",
+            "status": "active"
+          },
+          {
+            "id": "u-docs",
+            "name": "Dora Docs",
+            "login": "docs@test.com",
+            "role": "admin",
+            "department": "Documentation",
+            "terminalId": "t1",
+            "status": "active"
+          },
+          {
+            "id": "u-imp",
+            "name": "Imp Ortr",
+            "login": "importer@test.com",
+            "role": "importer",
+            "terminalId": "t1",
+            "status": "active"
+          }
+        ],
+        "terminals": [
+          {
+            "id": "t1",
+            "name": "Lagos Bonded Terminal",
+            "address": "Apapa, Lagos",
+            "status": "active"
+          }
+        ],
+        "platform-settings": {
+          "brand": "ConTracker"
+        },
+        "containers": [],
+        "activity-log": [],
+        "referrals": [],
+        "messages": []
+      },
+      "accounts": [
+        {
+          "id": "u-sctl",
+          "email": "sctl@test.com",
+          "password": "password123"
+        },
+        {
+          "id": "u-admin",
+          "email": "admin@test.com",
+          "password": "password123"
+        },
+        {
+          "id": "u-docs",
+          "email": "docs@test.com",
+          "password": "password123"
+        },
+        {
+          "id": "u-imp",
+          "email": "importer@test.com",
+          "password": "password123"
+        }
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 2000

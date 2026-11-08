@@ -1,0 +1,15 @@
+$kind: http-request
+url: "{{baseUrl}}/api/files?name=a.txt"
+method: POST
+headers:
+  Content-Type: text/plain
+queryParams:
+  name: a.txt
+body:
+  type: text
+  content: x
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 401", function () { pm.response.to.have.status(401); });
+    language: text/javascript
+order: 4000

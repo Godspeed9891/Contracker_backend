@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/users"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenImp}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"u-imp\",\"name\":\"Imp Ortr\",\"login\":\"importer@test.com\",\"role\":\"importer\",\"terminalId\":\"t1\",\"status\":\"active\",\"phone\":\"08012345678\"}]",
+      "changed": [
+        "u-imp"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 1000

@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/platform-settings"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenSctl}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "{\"brand\":\"ConTracker\",\"tagline\":\"Live tracking\"}"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 2000

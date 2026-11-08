@@ -1,0 +1,18 @@
+$kind: http-request
+url: "{{baseUrl}}/api/files?name=packing-list.txt"
+method: POST
+headers:
+  Authorization: Bearer {{tokenAdmin}}
+  Content-Type: text/plain
+queryParams:
+  name: packing-list.txt
+body:
+  type: text
+  content: "Packing list: 20 bags of rice"
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test("status is 200", function () { pm.response.to.have.status(200); });
+      pm.collectionVariables.set("fileId", pm.response.json().id);
+    language: text/javascript
+order: 1000

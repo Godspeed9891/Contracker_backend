@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/activity-log"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenAdmin}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"log-1\",\"msg\":\"Job ABCU1234567 received\",\"t\":\"2026-11-08T10:00:00.000Z\",\"dept\":\"Admin\",\"ack\":[],\"security\":false}]"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 200", function () { pm.response.to.have.status(200); });
+    language: text/javascript
+order: 9000

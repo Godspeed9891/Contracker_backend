@@ -1,0 +1,20 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/containers"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenAdmin}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"c1\",\"containerNumber\":\"ABCU1234567\",\"billOfLading\":\"BL-1\",\"terminalId\":\"t1\",\"owner\":\"Imp Ortr\",\"agent\":null,\"size\":\"20ft\",\"item\":\"rice\",\"destination\":\"Ikeja\",\"stageIdx\":4,\"history\":[{\"t\":\"2026-01-01T00:00:00.000Z\",\"msg\":\"registered\"}],\"financial\":{},\"documents\":[],\"progressNotes\":[],\"_v\":1}]",
+      "changed": [
+        "c1"
+      ]
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 409", function () { pm.response.to.have.status(409); });
+    language: text/javascript
+order: 6000

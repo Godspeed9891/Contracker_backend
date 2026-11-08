@@ -1,0 +1,13 @@
+# Use this workspace to collaborate
+workspace:
+  id: f907a63b-72c2-4ed5-a3d3-a6e1c004ac57
+
+cloudResources:
+  collections:
+    ../postman/collections/ConTracker API tests: a9a5449e-ea4a-4f03-a51e-a7fcf44f6361
+
+# All resources in the `postman/` folder are automatically registered in Local View.
+# Point to additional files outside the `postman/` folder to register them individually. Example:
+#localResources:
+#  collections:
+#    - ../tests/E2E Test Collection/

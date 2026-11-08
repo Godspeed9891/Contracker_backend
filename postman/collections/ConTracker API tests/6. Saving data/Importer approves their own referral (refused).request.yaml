@@ -1,0 +1,17 @@
+$kind: http-request
+url: "{{baseUrl}}/api/storage/referrals"
+method: PUT
+headers:
+  Authorization: Bearer {{tokenImp}}
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"r1\",\"referrerName\":\"Imp Ortr\",\"status\":\"approved\",\"name\":\"A Friend\"}]"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 403", function () { pm.response.to.have.status(403); });
+    language: text/javascript
+order: 13000

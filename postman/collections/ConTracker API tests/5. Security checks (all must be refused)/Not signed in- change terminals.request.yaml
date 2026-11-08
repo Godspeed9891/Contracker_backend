@@ -1,0 +1,17 @@
+$kind: http-request
+name: "Not signed in: change terminals"
+url: "{{baseUrl}}/api/storage/terminals"
+method: PUT
+headers:
+  Content-Type: application/json
+body:
+  type: json
+  content: |-
+    {
+      "value": "[{\"id\":\"t1\",\"name\":\"Lagos Bonded Terminal\",\"address\":\"Apapa, Lagos\",\"status\":\"active\"}]"
+    }
+scripts:
+  - type: afterResponse
+    code: pm.test("status is 401", function () { pm.response.to.have.status(401); });
+    language: text/javascript
+order: 6000
