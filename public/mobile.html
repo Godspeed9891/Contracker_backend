@@ -425,6 +425,12 @@ function getAuthToken(){ try{ return localStorage.getItem('contracker_token') ||
 function setAuthToken(t){ try{ if(t) localStorage.setItem('contracker_token', t); else localStorage.removeItem('contracker_token'); }catch(e){} }
 
 async function apiFetch(path, opts){
+  const method = ((opts && opts.method) || 'GET').toUpperCase();
+  if(method==='GET') return apiFetchInner(path, opts);
+  busyBegin(busyMessageFor(path));
+  try{ return await apiFetchInner(path, opts); } finally { busyEnd(); }
+}
+async function apiFetchInner(path, opts){
   const base = getApiBase();
   if(!base) { const e = new Error('No server configured yet.'); e.code='NO_API_BASE'; throw e; }
   opts = opts || {};
@@ -2749,6 +2755,10 @@ function checkPickedFile(file){
   return null;
 }
 async function uploadFileToServer(file){
+  busyBegin('Uploading file…');
+  try{ return await uploadFileToServerInner(file); } finally { busyEnd(); }
+}
+async function uploadFileToServerInner(file){
   const base = getApiBase();
   if(!base){ throw new Error('No server configured yet.'); }
   let res;
@@ -2761,6 +2771,10 @@ async function uploadFileToServer(file){
   return body;
 }
 async function fetchStoredFile(fileId){
+  busyBegin('Opening file…');
+  try{ return await fetchStoredFileInner(fileId); } finally { busyEnd(); }
+}
+async function fetchStoredFileInner(fileId){
   const base = getApiBase();
   let res;
   try{ res = await fetch(base+'/api/files/'+encodeURIComponent(fileId), {headers:{'Authorization':'Bearer '+getAuthToken()}}); }
@@ -3188,12 +3202,24 @@ function addPasswordToggles(){
 new MutationObserver(addPasswordToggles).observe(document.body,{childList:true,subtree:true});
 addPasswordToggles();
 
-function showBusy(msg){
+let _busyCount=0, _busyTimer=null, _busyAuto=false, _busyExplicit=false;
+function _paintBusy(msg){
   let el=document.getElementById('busy-overlay');
   if(!el){ el=document.createElement('div'); el.id='busy-overlay'; el.innerHTML='<div class="busy-box"><div class="busy-spin"></div><div class="busy-msg"></div></div>'; document.body.appendChild(el); }
   el.querySelector('.busy-msg').textContent=msg||'Loading…'; el.style.display='flex';
 }
-function hideBusy(){ const el=document.getElementById('busy-overlay'); if(el) el.style.display='none'; }
+function _clearBusy(){ const el=document.getElementById('busy-overlay'); if(el) el.style.display='none'; }
+function showBusy(msg){ _busyExplicit=true; _paintBusy(msg); }          // shown right away, until a screen is drawn
+function hideBusy(){ _busyExplicit=false; _busyAuto=false; clearTimeout(_busyTimer); _clearBusy(); }
+// Any request that changes something shows the spinner if it takes longer than a third of a second.
+function busyBegin(msg){ _busyCount++; if(_busyCount===1){ _busyTimer=setTimeout(()=>{ if(!_busyExplicit){ _busyAuto=true; _paintBusy(msg); } },350); } }
+function busyEnd(){ _busyCount=Math.max(0,_busyCount-1); if(_busyCount===0){ clearTimeout(_busyTimer); if(_busyAuto){ _busyAuto=false; if(!_busyExplicit) _clearBusy(); } } }
+function busyMessageFor(path){
+  if(/\/auth\/login/.test(path)) return 'Signing you in…';
+  if(/\/auth\/register/.test(path)) return 'Creating the account…';
+  if(/\/auth\/set-password/.test(path)) return 'Updating the password…';
+  return 'Saving…';
+}
 
 async function restoreSession(){
   // The sign-in token lives in localStorage, so a refresh picks the session back up.

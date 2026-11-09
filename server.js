@@ -41,6 +41,14 @@ server.on('error', err => { console.error('The server could not listen on port '
   server.listen(PORT, () => {
     clearTimeout(watchdog);
     console.log(`ConTracker backend listening on :${PORT}`);
+
+    // Render's free plan stops a service after 15 minutes without incoming traffic. Calling its own public address
+    // every 10 minutes counts as traffic. /api/health does not touch the database, so Neon is still free to sleep.
+    if (process.env.RENDER_EXTERNAL_URL) {
+      const url = process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '') + '/api/health';
+      setInterval(() => { fetch(url).catch(err => console.error('Keep-alive ping failed:', err.message)); }, 10 * 60 * 1000).unref();
+      console.log('Keep-alive ping on: ' + url);
+    }
   });
 })().catch(err => {
   console.error('Failed while ' + step + ':', err);
