@@ -4,11 +4,13 @@
 const express = require('express');
 const { authRequired } = require('../middleware/auth');
 const auth = require('../controllers/auth.controller');
-const { loginPerAccount, loginPerAddress, registerLimiter } = require('../middleware/rateLimit');
+const { loginPerAccount, loginPerAddress, registerLimiter, sendCodeLimiter, verifyCodeLimiter } = require('../middleware/rateLimit');
 
 const router = express.Router();
 
 router.post('/register', registerLimiter, auth.register);
+router.post('/send-code', sendCodeLimiter, auth.sendCode);
+router.post('/verify-code', verifyCodeLimiter, auth.verifyCode);
 router.post('/login', loginPerAddress, loginPerAccount, auth.login);
 router.post('/set-password', authRequired, auth.setPassword);
 router.post('/reset-seed-credentials', authRequired, auth.resetSeedCredentials);

@@ -26,4 +26,17 @@ async function accountSummaries() {
   return r.rows;
 }
 
-module.exports = { profileOf, findUserById, accountSummaries };
+// The file ids of every stored ID photo, so the clean-up never deletes one.
+async function idFileIds() {
+  const r = await pool.query(`SELECT u->>'idFileId' AS id FROM kv_store, ${USERS} AS u WHERE key = 'users' AND u->>'idFileId' IS NOT NULL`);
+  return r.rows.map(x => x.id);
+}
+
+// True when an account profile uses this email to sign in (pending or active). A leftover password with no profile
+// (for example after SCTL rejected the request) does not count: that person may sign up again.
+async function loginInUse(email) {
+  const r = await pool.query(`SELECT 1 FROM kv_store, ${USERS} AS u WHERE key = 'users' AND lower(u->>'login') = $1 LIMIT 1`, [String(email).trim().toLowerCase()]);
+  return r.rows.length > 0;
+}
+
+module.exports = { profileOf, findUserById, accountSummaries, idFileIds, loginInUse };

@@ -29,3 +29,14 @@ CREATE TABLE IF NOT EXISTS files (
   uploaded_by TEXT NOT NULL,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- One-time email verification codes (sign-up). Only a hash of the code is stored, never the code itself.
+CREATE TABLE IF NOT EXISTS otp_codes (
+  email      TEXT NOT NULL,
+  purpose    TEXT NOT NULL,
+  code_hash  TEXT NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL,
+  attempts   INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (email, purpose)
+);

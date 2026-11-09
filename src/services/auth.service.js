@@ -9,6 +9,8 @@ const { findUserById } = require('../models/user.model');
 const { hashPassword, checkPassword } = require('../utils/password');
 const { signToken } = require('../utils/token');
 const { isSctl, isTerminalAdmin } = require('../policies/role.policy');
+const { emailIsVerified } = require('./otp.service');
+const { storeIdPhoto, removeStoredFile } = require('./file.service');
 
 const SELF_REGISTER_ROLES = ['importer', 'agent', 'admin', 'customs'];
 const RESTORABLE_ROLES = ['importer', 'agent', 'admin', 'customs', 'sctl'];
@@ -39,8 +41,16 @@ async function register(body) {
   }
 
   if (typeof profile !== 'object' || Array.isArray(profile)) return fail(400, 'Malformed profile.');
+  if (!emailIsVerified(body.verifyToken, mail)) return fail(403, 'Please verify your email address first.');
   if (!SELF_REGISTER_ROLES.includes(profile.role)) return fail(400, 'Invalid account type.');
   const hash = await hashPassword(password);
+  let idFileId = null;
+  if (typeof profile.idImage === 'string' && profile.idImage) {
+    const stored = await storeIdPhoto(id, profile.idImage, profile.idFileName);
+    if (stored.error) return fail(400, stored.error);
+    idFileId = stored.id;
+  }
+  if (!idFileId && process.env.REQUIRE_ID_PHOTO !== 'off') return fail(400, 'Please upload a photo of your ID.');
   let terminalsChanged = false;
   try {
     const outcome = await withTransaction(async client => {
@@ -72,13 +82,16 @@ async function register(body) {
       await credentialModel.insert(mail, hash, id, client);
       const clean = Object.assign({}, profile, { id, login: String(email).trim(), terminalId, status: 'pending_verification', verifiedBy: null, verifiedDate: null });
       delete clean.password;
+      delete clean.idImage;
+      if (idFileId) clean.idFileId = idFileId;
       users.push(clean);
       await kvUpsert(client, 'users', users);
       if (terminalsChanged) await kvUpsert(client, 'terminals', terminals);
       return {};
     });
-    if (outcome.response) return outcome.response;
+    if (outcome.response) { if (idFileId) await removeStoredFile(idFileId); return outcome.response; }
   } catch (e) {
+    if (idFileId) await removeStoredFile(idFileId);
     console.error('register failed:', e);
     return fail(500, 'Could not save your registration. Please try again.');
   }

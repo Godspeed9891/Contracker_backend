@@ -4,9 +4,9 @@
 
 const crypto = require('crypto');
 const { kvGet } = require('../models/kv.model');
-const { profileOf } = require('../models/user.model');
+const { profileOf, findUserById, idFileIds } = require('../models/user.model');
 const fileModel = require('../models/file.model');
-const { canOpenSharedFile } = require('../policies/file.policy');
+const { canOpenSharedFile, canOpenIdPhoto } = require('../policies/file.policy');
 const { FILE_MAX_BYTES, FILE_TYPES } = require('../constants/files');
 
 const fail = (status, message) => ({ status, body: { error: message } });
@@ -46,15 +46,32 @@ async function downloadFile(user, rawId) {
     const messages = (await kvGet('messages')) || [];
     ok = canOpenSharedFile(user, profile, f, containers, messages);
   }
+  if (!ok) ok = canOpenIdPhoto(user, await findUserById(f.uploaded_by), f);
   if (!ok) return fail(403, 'You do not have access to that file.');
   return { status: 200, file: f };
 }
+
+// Sign-up sends the ID photo as a data URL. It is stored as a file owned by the new account, and the account record
+// keeps only the file's id. Returns { id } or { error }.
+async function storeIdPhoto(ownerId, dataUrl, originalName) {
+  const m = /^data:(image\/(png|jpeg|webp));base64,([A-Za-z0-9+/=\s]+)$/.exec(String(dataUrl));
+  if (!m) return { error: 'The ID photo must be a PNG, JPG or WEBP image.' };
+  const buf = Buffer.from(m[3].replace(/\s/g, ''), 'base64');
+  const ext = m[2] === 'jpeg' ? 'jpg' : m[2];
+  if (!buf.length || buf.length > FILE_MAX_BYTES) return { error: 'The ID photo must be smaller than 10 MB.' };
+  if (!looksLikeType(ext, buf)) return { error: 'That ID photo does not look like a real image.' };
+  const id = crypto.randomUUID();
+  const base = String(originalName || 'id-photo').replace(/[\\/\0]/g, '_').replace(/\.[A-Za-z0-9]+$/, '').slice(0, 150) || 'id-photo';
+  await fileModel.insertFile({ id, name: base + '.' + ext, mime: m[1], size: buf.length, data: buf, uploadedBy: ownerId });
+  return { id };
+}
+async function removeStoredFile(id) { try { await fileModel.removeFiles([id]); } catch (e) { /* the clean-up will catch it */ } }
 
 async function cleanupOrphanFiles() {
   try {
     const full = await kvGet('containers');
     if (!Array.isArray(full)) return;
-    const used = new Set();
+    const used = new Set(await idFileIds());
     for (const m of ((await kvGet('messages')) || [])) if (m && m.fileId) used.add(m.fileId);
     for (const c of full) {
       for (const d of (c.documents || [])) if (d && d.fileId) used.add(d.fileId);
@@ -65,4 +82,4 @@ async function cleanupOrphanFiles() {
   } catch (e) { console.error('file cleanup failed:', e.message); }
 }
 
-module.exports = { fileExtOf, looksLikeType, uploadFile, downloadFile, cleanupOrphanFiles };
+module.exports = { fileExtOf, looksLikeType, uploadFile, downloadFile, cleanupOrphanFiles, storeIdPhoto, removeStoredFile };

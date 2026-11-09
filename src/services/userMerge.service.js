@@ -16,7 +16,7 @@ function mergeUsers(full, view, parsed, user) {
     for (const k of SERVER_OWNED_USER_KEYS) if (c[k] !== undefined) keep[k] = c[k];
     const merged = Object.assign({}, n, keep);
     merged._v = sameUserRecord(c, merged) ? (c._v || 0) : (c._v || 0) + 1;
-    out.push(canSeeIdImage(user, c) ? merged : Object.assign({}, merged, { idImage: c.idImage === undefined ? null : c.idImage }));
+    out.push(canSeeIdImage(user, c) ? merged : Object.assign({}, merged, { idImage: c.idImage === undefined ? null : c.idImage, idFileId: c.idFileId === undefined ? null : c.idFileId }));
   }
   for (const n of parsed) if (!fullIds.has(n.id)) out.push(Object.assign({}, n, { _v: 1 }));
   return out;

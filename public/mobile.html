@@ -70,11 +70,7 @@
   @media (max-width:600px){ .form-grid{grid-template-columns:1fr;} }
   .auth-foot{text-align:center;font-size:12.5px;color:var(--ink-soft);margin-top:16px;}
   .auth-foot button{color:var(--gold-2);font-weight:600;text-decoration:underline;background:none;border:none;padding:0;}
-  .demo-box{background:var(--yellow-soft);border:1px solid #E9D68F;border-radius:var(--radius);padding:10px 12px;font-size:11.5px;color:#6E5610;margin-top:16px;}
-  .demo-box b{font-family:'IBM Plex Mono',monospace;}
   .err-text{color:var(--rust);font-size:12px;margin:-6px 0 10px;}
-  .otp-banner{background:var(--yellow-soft); border:1px solid #E9D68F; border-radius:var(--radius); padding:10px 12px; font-size:12px; color:#6E5610; margin-bottom:14px;}
-  .otp-banner b{font-family:'IBM Plex Mono',monospace; font-size:15px; letter-spacing:3px;}
 
   #app-shell{display:none; min-height:100vh; grid-template-columns:230px 1fr;}
   @media (min-width:861px){ #app-shell{display:grid;} }
@@ -307,6 +303,11 @@
   #toast-wrap{ left:14px; right:14px; bottom:max(14px, env(safe-area-inset-bottom)); max-width:none; }
   #busy-overlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(12,12,12,.85);}
   .busy-box{background:#fff;color:#111;border-radius:12px;padding:24px 30px;text-align:center;font-weight:600;font-size:14px;max-width:80vw;}
+  .idcard-preview{cursor:zoom-in;}
+  #id-lightbox{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;cursor:zoom-out;}
+  #id-lightbox img{max-width:95vw;max-height:92vh;border-radius:6px;background:#fff;}
+  .busy-hint{font-weight:400;font-size:12.5px;color:#555;margin-top:10px;max-width:280px;}
+  .busy-actions{display:none;margin-top:14px;}
   .busy-spin{width:34px;height:34px;margin:0 auto 12px;border:4px solid #e3d9b0;border-top-color:#B8932A;border-radius:50%;animation:busyspin .8s linear infinite;}
   @keyframes busyspin{to{transform:rotate(360deg);}}
   .pw-wrap{position:relative;display:block;}
@@ -438,14 +439,20 @@ async function apiFetchInner(path, opts){
   const token = getAuthToken();
   if(token) headers['Authorization'] = 'Bearer ' + token;
   let res;
+  const ctl = new AbortController();
+  const timer = setTimeout(()=>ctl.abort(), window.API_TIMEOUT_MS || 120000);   // a sleeping server must not leave the page waiting forever
   try{
-    res = await fetch(base + path, Object.assign({}, opts, {headers}));
+    res = await fetch(base + path, Object.assign({}, opts, {headers, signal: ctl.signal}));
   }catch(netErr){
-    const e = new Error('Could not reach the server. Check the server URL and your connection.');
+    clearTimeout(timer);
+    const e = new Error(netErr && netErr.name==='AbortError'
+      ? 'The server took too long to answer. It may be waking up: wait a minute and try again.'
+      : 'Could not reach the server. Check the server URL and your connection.');
     e.code='NETWORK'; throw e;
   }
   let body = null;
   try{ body = await res.json(); }catch(e){}
+  clearTimeout(timer);
   if(res.status===401){ setAuthToken(''); }
   if(!res.ok){
     const err = new Error((body && body.error) || ('Request failed (HTTP '+res.status+').'));
@@ -481,7 +488,7 @@ window.storage = {
 };
 
 /* A brand-new server starts empty. The first SCTL account is created on the server with
-   scripts/create-sctl.js; this page no longer sends any demo data. */
+   scripts/create-sctl.js; this page no longer sends any seed data. */
 async function tryBootstrapServer(){ /* intentionally empty */ }
 
 /* ========================= LIVE SYNC =========================
@@ -498,7 +505,7 @@ async function refreshFromStorage(){
     const [terminals, containers, users, log, settings, referrals, messages] = await Promise.all([
       loadTerminals(), loadContainers(), loadUsers(), loadLog(), loadSettings(), loadReferrals(), loadMessages()
     ]);
-    if((window.__storageFailures||0)!==failsBefore){ if(!getAuthToken()) sessionExpired(); return; } // a failed read must never replace live data with demo data
+    if((window.__storageFailures||0)!==failsBefore){ if(!getAuthToken()) sessionExpired(); return; } // a failed read must never replace live data with empty defaults data
     const changed = JSON.stringify(state.archived||[])!==archBefore || JSON.stringify(terminals)!==JSON.stringify(state.terminals) ||
       JSON.stringify(containers)!==JSON.stringify(state.containers) ||
       JSON.stringify(users)!==JSON.stringify(state.users) ||
@@ -872,35 +879,44 @@ function pendingHTML(){
 }
 function otpHTML(){
   const d = state.regDraft;
-  if(!state.otp){
+  if(!state.otpSent){
     return `
-      <h2>Verify your account</h2>
-      <div class="lede">Choose where to receive your one-time verification code.</div>
-      <div class="field"><label>Send code to</label>
-        <select id="otp-channel">
-          <option value="email">Email — ${d.email}</option>
-          <option value="phone">Phone — ${d.phone}</option>
-        </select></div>
+      <h2>Verify your email</h2>
+      <div class="lede">We will email a 6-digit code to <b>${d.email}</b> to confirm it is yours.</div>
+      ${state.authError?`<div class="err-text">${state.authError}</div>`:''}
       <button class="btn full" onclick="sendOtp()">Send code</button>
       <div class="auth-foot"><button onclick="setAuthView('register')">‹ Back</button></div>`;
   }
   return `
     <h2>Enter verification code</h2>
-    <div class="lede">We sent a 6-digit code to your ${state.otpChannel==='email'?'email':'phone number'}.</div>
-    <div class="otp-banner">Demo mode — no real ${state.otpChannel==='email'?'email':'SMS'} is sent. Your code is <b>${state.otp}</b>.</div>
+    <div class="lede">We sent a 6-digit code to <b>${d.email}</b>. It expires in 10 minutes. Check your spam folder if it does not arrive.</div>
     ${state.authError?`<div class="err-text">${state.authError}</div>`:''}
-    <div class="field"><label>6-digit code</label><input type="text" id="r-otp" maxlength="6" placeholder="••••••"></div>
+    <div class="field"><label>6-digit code</label><input type="text" id="r-otp" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••"></div>
     <button class="btn full" onclick="verifyOtp()">Verify & continue</button>
-    <button class="btn ghost full" style="margin-top:6px;" onclick="resendOtp()">Resend code</button>
+    <button class="btn ghost full" style="margin-top:6px;" onclick="resendOtp()">Send a new code</button>
     <div class="auth-foot"><button onclick="setAuthView('register')">‹ Use different details</button></div>`;
 }
-function sendOtp(){
-  const channel = document.getElementById('otp-channel').value;
-  state.otpChannel = channel;
-  state.otp = String(Math.floor(100000+Math.random()*900000));
+async function requestOtpCode(){
+  const d = state.regDraft;
+  try{
+    await apiFetch('/api/auth/send-code', {method:'POST', body: JSON.stringify({email: d.email})});
+    return true;
+  }catch(err){
+    state.authError = err.message || 'Could not send the code. Please try again.';
+    return false;
+  }
+}
+async function sendOtp(){
+  state.authError='';
+  if(await requestOtpCode()) state.otpSent = true;
   renderAuthCard();
 }
-function resendOtp(){ state.otp = String(Math.floor(100000+Math.random()*900000)); state.authError=''; renderAuthCard(); toast('New code sent.'); }
+async function resendOtp(){
+  state.authError='';
+  const ok = await requestOtpCode();
+  renderAuthCard();
+  if(ok) toast('New code sent.');
+}
 document.addEventListener('submit', async function(e){
   if(e.target && e.target.id==='signin-form'){
     e.preventDefault();
@@ -966,14 +982,32 @@ document.addEventListener('submit', async function(e){
       } else terminalId = tSel;
     }
     state.regDraft = {name, email, phone, password, org, role, department, terminalId, newTerminal};
-    state.otp = null; state.otpChannel = null;
+    state.otp = null; state.otpChannel = null; state.otpSent = false; state.verifyToken = null;
     setAuthView('otp');
   }
 });
 async function verifyOtp(){
   const code = document.getElementById('r-otp').value.trim();
-  if(code !== state.otp){ state.authError='Incorrect code. Please try again.'; renderAuthCard(); return; }
+  if(!/^\d{6}$/.test(code)){ state.authError='Enter the 6-digit code.'; renderAuthCard(); return; }
+  try{
+    const r = await apiFetch('/api/auth/verify-code', {method:'POST', body: JSON.stringify({email: state.regDraft.email, code})});
+    state.verifyToken = r.verifyToken;
+  }catch(err){
+    state.authError = err.message || 'Could not check the code. Please try again.'; renderAuthCard(); return;
+  }
   setAuthView('idupload');
+}
+async function shrinkIdImage(file){
+  try{
+    if(!/^image\//.test(file.type)) return null;
+    const url = URL.createObjectURL(file);
+    const img = await new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+    const scale = Math.min(1, 1600/Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth*scale); c.height = Math.round(img.naturalHeight*scale);
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    URL.revokeObjectURL(url);
+    return c.toDataURL('image/jpeg', 0.82);
+  }catch(e){ return null; }
 }
 async function submitIdVerification(){
   showBusy('Submitting your details…');
@@ -981,15 +1015,17 @@ async function submitIdVerification(){
   const fileInput = document.getElementById('id-file');
   const file = fileInput && fileInput.files && fileInput.files[0];
   if(!file){ state.authError='Please upload a photo of your ID before continuing.'; renderAuthCard(); return; }
-  let idImage = null;
-  try{
-    idImage = await new Promise((res)=>{
-      const reader = new FileReader();
-      reader.onload = ()=>res(reader.result);
-      reader.onerror = ()=>res(null);
-      reader.readAsDataURL(file);
-    });
-  }catch(e){}
+  let idImage = await shrinkIdImage(file);     // phone photos are several MB; a 1600 px copy is plenty to read an ID and uploads much faster
+  if(!idImage){
+    try{
+      idImage = await new Promise((res)=>{
+        const reader = new FileReader();
+        reader.onload = ()=>res(reader.result);
+        reader.onerror = ()=>res(null);
+        reader.readAsDataURL(file);
+      });
+    }catch(e){}
+  }
   const d = state.regDraft;
   const newId = 'u'+Date.now();
   const isNewTerminalAdmin = !!d.newTerminal;
@@ -1008,7 +1044,7 @@ async function submitIdVerification(){
   // terminal) the pending terminal together, or not at all.
   try{
     await apiFetch('/api/auth/register', {method:'POST', body: JSON.stringify({
-      id:newId, email:d.email, password:d.password, profile:user,
+      id:newId, email:d.email, password:d.password, profile:user, verifyToken: state.verifyToken,
       newTerminal: isNewTerminalAdmin ? {id:newTerminalId, name:d.newTerminal.name, address:d.newTerminal.address} : null
     })});
   }catch(err){
@@ -1955,7 +1991,7 @@ function verificationHTML(){
               ${!u.isNewTerminalAdmin && u.terminalId && terminalById(u.terminalId)?`<div class="tag-line">Terminal: <b>${terminalById(u.terminalId).name}</b></div>`:''}
               <div class="tag-line">ID type: ${u.idType||'—'}</div>
             </div>
-            <div>${u.idImage?`<img class="idcard-preview" src="${u.idImage}">`:'<div class="tag-line">No ID image provided.</div>'}</div>
+            <div>${(u.idFileId||u.idImage)?`<img class="idcard-preview" alt="ID photo" ${u.idFileId?`data-id-file="${u.idFileId}"`:`src="${u.idImage}"`}>`:'<div class="tag-line">No ID image provided.</div>'}</div>
           </div>
           <div style="margin-top:10px; display:flex; gap:8px;">
             <button class="btn small" onclick="approveUser('${u.id}')">Approve & Activate</button>
@@ -3199,16 +3235,44 @@ function addPasswordToggles(){
     wrap.appendChild(b);
   });
 }
-new MutationObserver(addPasswordToggles).observe(document.body,{childList:true,subtree:true});
+/* ID photos are stored as files; load each one (with the sign-in token) when it appears on screen. */
+function loadIdPreviews(){
+  document.querySelectorAll('img[data-id-file]:not([data-loading])').forEach(async img=>{
+    img.setAttribute('data-loading','1');
+    try{ const blob = await fetchStoredFileInner(img.getAttribute('data-id-file')); img.src = URL.createObjectURL(blob); }
+    catch(e){ img.alt = 'The ID photo could not be loaded.'; }
+  });
+}
+new MutationObserver(()=>{ addPasswordToggles(); loadIdPreviews(); }).observe(document.body,{childList:true,subtree:true});
+/* Click an ID photo to see it large; click anywhere or press Esc to close. */
+function closeIdLightbox(){ const el=document.getElementById('id-lightbox'); if(el) el.style.display='none'; }
+document.addEventListener('click', function(e){
+  const t=e.target;
+  if(t && t.matches && t.matches('img.idcard-preview') && t.src){
+    let el=document.getElementById('id-lightbox');
+    if(!el){ el=document.createElement('div'); el.id='id-lightbox'; el.innerHTML='<img alt="ID photo">'; el.addEventListener('click',closeIdLightbox); document.body.appendChild(el); }
+    el.querySelector('img').src=t.src; el.style.display='flex';
+  }
+});
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeIdLightbox(); });
 addPasswordToggles();
 
 let _busyCount=0, _busyTimer=null, _busyAuto=false, _busyExplicit=false;
+let _busyHint1=null, _busyHint2=null;
 function _paintBusy(msg){
   let el=document.getElementById('busy-overlay');
-  if(!el){ el=document.createElement('div'); el.id='busy-overlay'; el.innerHTML='<div class="busy-box"><div class="busy-spin"></div><div class="busy-msg"></div></div>'; document.body.appendChild(el); }
+  if(!el){ el=document.createElement('div'); el.id='busy-overlay'; el.innerHTML='<div class="busy-box"><div class="busy-spin"></div><div class="busy-msg"></div><div class="busy-hint"></div><div class="busy-actions"><button type="button" class="btn ghost" onclick="cancelBusy()">Cancel</button></div></div>'; document.body.appendChild(el); }
+  const wasOpen = el.style.display==='flex';
   el.querySelector('.busy-msg').textContent=msg||'Loading…'; el.style.display='flex';
+  if(!wasOpen){
+    el.querySelector('.busy-hint').textContent=''; el.querySelector('.busy-actions').style.display='none';
+    clearTimeout(_busyHint1); clearTimeout(_busyHint2);
+    _busyHint1=setTimeout(()=>{ el.querySelector('.busy-hint').textContent='This is taking longer than usual. The server may be waking up, which can take up to a minute. Please keep this page open.'; },15000);
+    _busyHint2=setTimeout(()=>{ el.querySelector('.busy-actions').style.display='block'; },60000);
+  }
 }
-function _clearBusy(){ const el=document.getElementById('busy-overlay'); if(el) el.style.display='none'; }
+function _clearBusy(){ clearTimeout(_busyHint1); clearTimeout(_busyHint2); const el=document.getElementById('busy-overlay'); if(el) el.style.display='none'; }
+function cancelBusy(){ hideBusy(); if(!state.role) renderLogin(); }
 function showBusy(msg){ _busyExplicit=true; _paintBusy(msg); }          // shown right away, until a screen is drawn
 function hideBusy(){ _busyExplicit=false; _busyAuto=false; clearTimeout(_busyTimer); _clearBusy(); }
 // Any request that changes something shows the spinner if it takes longer than a third of a second.
@@ -3216,6 +3280,8 @@ function busyBegin(msg){ _busyCount++; if(_busyCount===1){ _busyTimer=setTimeout
 function busyEnd(){ _busyCount=Math.max(0,_busyCount-1); if(_busyCount===0){ clearTimeout(_busyTimer); if(_busyAuto){ _busyAuto=false; if(!_busyExplicit) _clearBusy(); } } }
 function busyMessageFor(path){
   if(/\/auth\/login/.test(path)) return 'Signing you in…';
+  if(/\/auth\/send-code/.test(path)) return 'Sending the code…';
+  if(/\/auth\/verify-code/.test(path)) return 'Checking the code…';
   if(/\/auth\/register/.test(path)) return 'Creating the account…';
   if(/\/auth\/set-password/.test(path)) return 'Updating the password…';
   return 'Saving…';
@@ -3261,4 +3327,3 @@ async function restoreSession(){
 </script>
 </body>
 </html>
-

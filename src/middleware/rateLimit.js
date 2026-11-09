@@ -31,4 +31,10 @@ const registerLimiter = rateLimit({
   keyGenerator: req => ipKeyGenerator(req.ip)
 });
 
-module.exports = { loginPerAccount, loginPerAddress, registerLimiter };
+const emailKey = req => ipKeyGenerator(req.ip) + '|' + String((req.body && req.body.email) || '').toLowerCase();
+//  - sendCodeLimiter: 5 code emails per 15 minutes for one email from one address
+//  - verifyCodeLimiter: 15 code checks per 15 minutes for one email from one address
+const sendCodeLimiter = rateLimit({ ...common, windowMs: 15 * 60 * 1000, limit: 5, keyGenerator: emailKey });
+const verifyCodeLimiter = rateLimit({ ...common, windowMs: 15 * 60 * 1000, limit: 15, keyGenerator: emailKey });
+
+module.exports = { loginPerAccount, loginPerAddress, registerLimiter, sendCodeLimiter, verifyCodeLimiter };
