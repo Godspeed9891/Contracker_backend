@@ -218,6 +218,13 @@
   .terminal-card{border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:var(--shadow);}
   .terminal-card h4{font-size:15px;margin-bottom:4px;}
   .idcard-preview{max-width:260px;border-radius:var(--radius);border:1px solid var(--line);margin-top:8px;}
+  #busy-overlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(12,12,12,.85);}
+  .busy-box{background:#fff;color:#111;border-radius:12px;padding:24px 30px;text-align:center;font-weight:600;font-size:14px;max-width:80vw;}
+  .busy-spin{width:34px;height:34px;margin:0 auto 12px;border:4px solid #e3d9b0;border-top-color:#B8932A;border-radius:50%;animation:busyspin .8s linear infinite;}
+  @keyframes busyspin{to{transform:rotate(360deg);}}
+  .pw-wrap{position:relative;display:block;}
+  .pw-wrap input{padding-right:62px !important;}
+  .pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--ink);font:600 12px inherit;font-family:inherit;cursor:pointer;padding:6px 8px;}
 </style>
 </head>
 <body>
@@ -311,10 +318,10 @@ const ROLE_META = {
   customs:{name:'Customs Officer', sub:'Mother Port (WACT/OMT) transire movement oversight'}
 };
 const ID_TYPE_OPTIONS = {
-  importer:['CAC Document','NIMC National ID','Driving License'],
-  agent:['Customs Port Pass','Agency License','CAC Document','NIMC National ID','Driving License'],
-  admin:['Company Employee ID','Customs Port Pass','NIMC National ID'],
-  customs:['Customs Service ID','NIMC National ID']
+  importer:['NIMC National ID','International Passport','Driving License',"Voter's Card",'CAC Document'],
+  agent:['NIMC National ID','International Passport','Driving License',"Voter's Card",'Customs Port Pass','Agency License','CAC Document'],
+  admin:['NIMC National ID','International Passport','Driving License',"Voter's Card",'Company Employee ID','Customs Port Pass'],
+  customs:['Customs Service ID','NIMC National ID','International Passport','Driving License',"Voter's Card"]
 };
 const STATIONS = ['Onne Port Area II Command','WACT Office','OMT Office','Bonded Terminal Main Yard'];
 
@@ -566,14 +573,14 @@ function toast(msg){
 function isSCTL(){ return state.role==='sctl'; }
 function isCustoms(){ return state.role==='customs'; }
 function isStaff(){ return state.role==='admin'; }
-function myScopeMatches(c){ return isSCTL() || (isStaff() && c.terminalId===state.terminalId); }
+function myScopeMatches(c){ return isStaff() && c.terminalId===state.terminalId; } // SCTL can view every job but never change one
 function isTerminalAdmin(){ return isStaff() && state.department==='Admin'; }
 function canSeeFenBol(){ return isStaff() && FEN_BOL_DEPTS.includes(state.department); }
 function canSeeFinance(){ return isStaff() && FINANCE_DEPTS.includes(state.department) && state.settings.features.finance; }
-function canEditTransferLetter(c){ return myScopeMatches(c) && (isSCTL() || ['Documentation','Operations','Admin'].includes(state.department)); }
-function canEditInvoiceNumber(c){ return myScopeMatches(c) && (isSCTL() || ['Accountant','DTI','Operations','Admin'].includes(state.department)); }
-function canEditExitNumber(c){ return myScopeMatches(c) && (isSCTL() || ['Operations','Admin'].includes(state.department)); }
-function canEditTransporter(c){ return myScopeMatches(c) && (isSCTL() || ['Documentation','DTI','Transport','Admin'].includes(state.department)); }
+function canEditTransferLetter(c){ return myScopeMatches(c) && (['Documentation','Operations','Admin'].includes(state.department)); }
+function canEditInvoiceNumber(c){ return myScopeMatches(c) && (['Accountant','DTI','Operations','Admin'].includes(state.department)); }
+function canEditExitNumber(c){ return myScopeMatches(c) && (['Operations','Admin'].includes(state.department)); }
+function canEditTransporter(c){ return myScopeMatches(c) && (['Documentation','DTI','Transport','Admin'].includes(state.department)); }
 async function saveTransporter(id){
   const c = byId(id);
   const name = document.getElementById('transporter-name').value.trim();
@@ -608,7 +615,7 @@ function visibleContainers(){
   if(state.role==='agent') return state.containers.filter(c=>c.agent===state.person);
   return [];
 }
-function activeAlertCount(list){ return list.reduce((n,c)=>n+c.alerts.filter(a=>a.status==='active').length,0); }
+function activeAlertCount(list){ return list.reduce((n,c)=>n+(c.alerts||[]).filter(a=>a.status==='active').length,0); }
 function daysBetween(iso){ if(!iso) return null; return Math.floor((Date.now()-new Date(iso).getTime())/86400000); }
 function uniqueNames(list, key){ return [...new Set(list.map(c=>c[key]))].filter(Boolean); }
 function genUniqueId(name){
@@ -622,7 +629,7 @@ function normalizeContainer(c){
     invoices:[], deliveryLocation:null, sealNumber:null, sealNumberDelivery:null, sealMismatch:false,
     placementInstruction:null, placementActual:null, progressNotes:[], transferLetterNumber:null,
     invoiceNumber:null, exitNumber:null, loadingDateTime:null, transportHandover:null, duplicateFlag:null,
-    transporter:null, transportHistory:[]
+    transporter:null, transportHistory:[], alerts:[], steppedDown:{status:false}, documents:[], history:[]
   }, c, {
     financial: Object.assign({
       processingCharge:0, mptRating:0, shippingRating:0, terminalCharges:0, clearingExpenses:0, transportation:0,
@@ -649,6 +656,7 @@ function renderLogin(){
 }
 function setAuthView(v){ state.authView=v; state.authError=''; renderAuthCard(); }
 function renderAuthCard(){
+  hideBusy();
   const card = document.getElementById('auth-card');
   if(state.authView==='server-setup') card.innerHTML = serverSetupHTML();
   else if(state.authView==='welcome') card.innerHTML = welcomeHTML();
@@ -808,6 +816,7 @@ function resendOtp(){ state.otp = String(Math.floor(100000+Math.random()*900000)
 document.addEventListener('submit', async function(e){
   if(e.target && e.target.id==='signin-form'){
     e.preventDefault();
+    showBusy('Signing you in…');
     const role = document.getElementById('s-role').value;
     const login = document.getElementById('s-login').value.trim().toLowerCase();
     const password = document.getElementById('s-password').value;
@@ -879,6 +888,7 @@ async function verifyOtp(){
   setAuthView('idupload');
 }
 async function submitIdVerification(){
+  showBusy('Submitting your details…');
   const idType = document.getElementById('id-type').value;
   const fileInput = document.getElementById('id-file');
   const file = fileInput && fileInput.files && fileInput.files[0];
@@ -927,11 +937,10 @@ async function finishLogin(userId){
   if(!u) return;
   state.role = u.role; state.person = u.name; state.userId = u.id; state.department = u.department; state.terminalId = u.terminalId;
   state.activeTab='dashboard';
-  state.containers = await loadContainers();
+  const [containers, log, referrals, messages] = await Promise.all([loadContainers(), loadLog(), loadReferrals(), loadMessages()]);
+  state.containers = containers;
   computeDuplicateFlags();
-  state.log = await loadLog();
-  state.referrals = await loadReferrals();
-  state.messages = await loadMessages();
+  state.log = log; state.referrals = referrals; state.messages = messages;
   renderApp();
   startLiveSync();
 }
@@ -1068,6 +1077,7 @@ function myInboxCount(){
   return state.log.filter(l=>l.terminalId===state.terminalId && l.dept===state.department && !l.ack.includes(state.department)).length;
 }
 function renderApp(){
+  hideBusy();
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app-shell').style.display='grid';
   document.getElementById('sidebar').classList.remove('open');
@@ -1804,10 +1814,14 @@ async function deleteStaff(uid){
 /* ========================= VERIFICATION QUEUE ========================= */
 function verificationHTML(){
   let pending;
-  if(isSCTL()) pending = state.users.filter(u=>u.status==='pending_verification' && u.isNewTerminalAdmin);
+  if(isSCTL()){
+    // SCTL reviews: new terminals, Admin accounts, customs officers, and anyone at a terminal that has no active Admin yet.
+    const hasActiveAdmin = tid => state.users.some(a=>a.role==='admin' && a.department==='Admin' && a.status==='active' && a.terminalId===tid);
+    pending = state.users.filter(u=>u.status==='pending_verification' && (u.isNewTerminalAdmin || u.role==='customs' || (u.role==='admin' && u.department==='Admin') || !hasActiveAdmin(u.terminalId)));
+  }
   else pending = state.users.filter(u=>u.status==='pending_verification' && u.terminalId===state.terminalId && !u.isNewTerminalAdmin);
   return `
-    <div class="topbar"><div><h1>Verification Queue</h1><div class="desc">${isSCTL()?'New bonded terminal requests, submitted alongside their first Admin account.':'New importer, agent, and staff accounts waiting on your review.'}</div></div></div>
+    <div class="topbar"><div><h1>Verification Queue</h1><div class="desc">${isSCTL()?'New bonded terminal requests, Admin accounts, customs officers, and any request for a terminal that has no active Admin yet.':'New importer, agent, and staff accounts waiting on your review.'}</div></div></div>
     <div class="panel"><div class="panel-body">
       ${pending.length===0? `<div class="empty-state"><div class="glyph">✓</div>Nothing pending right now.</div>` :
         pending.map(u=>`
@@ -1817,6 +1831,7 @@ function verificationHTML(){
               <b>${u.name}</b> — ${ROLE_META[u.role].name}${u.department?' · '+u.department:''}
               <div class="tag-line">${u.login} · ${u.phone||''} · ${u.org||''}</div>
               ${u.isNewTerminalAdmin?`<div class="tag-line">Requesting new terminal: <b>${terminalById(u.terminalId)?terminalById(u.terminalId).name:''}</b>, ${terminalById(u.terminalId)?terminalById(u.terminalId).address:''}</div>`:''}
+              ${!u.isNewTerminalAdmin && u.terminalId && terminalById(u.terminalId)?`<div class="tag-line">Terminal: <b>${terminalById(u.terminalId).name}</b></div>`:''}
               <div class="tag-line">ID type: ${u.idType||'—'}</div>
             </div>
             <div>${u.idImage?`<img class="idcard-preview" src="${u.idImage}">`:'<div class="tag-line">No ID image provided.</div>'}</div>
@@ -1955,7 +1970,7 @@ async function updateStage(id){
   const idx = parseInt(document.getElementById('stage-select').value,10);
   if(idx === c.stageIdx){ toast('Already at that stage.'); return; }
   const allowed = allowedStagesFor(state.department);
-  if(!isSCTL() && state.department!=='Admin' && !allowed.includes(idx)){ toast(`Your department (${state.department}) is not authorized to set this stage.`); return; }
+  if(state.department!=='Admin' && !allowed.includes(idx)){ toast(`Your department (${state.department}) is not authorized to set this stage.`); return; }
   const forceEl = document.getElementById('force-advance');
   const force = forceEl && forceEl.checked;
   if(idx>=10 && !c.bolComplete && !force){ toast('Assessment (Book of Life) must be completed before examination can begin.'); return; }
@@ -2206,7 +2221,7 @@ function openContainer(id){
   const FREE_DAYS = state.settings.freeDays;
   const detentionCost = detentionDays!==null && detentionDays>FREE_DAYS ? (detentionDays-FREE_DAYS)*state.settings.dailyPenaltyRate : 0;
   const financialTotal = financialTotalOf(c, detentionCost);
-  const canStage = canEdit && (isSCTL() || dept==='Admin' || allowedStagesFor(dept).length>0);
+  const canStage = canEdit && (dept==='Admin' || allowedStagesFor(dept).length>0);
   const isImporterAgentOwner = (state.role==='importer' && c.owner===state.person) || (state.role==='agent' && c.agent===state.person);
 
   const html = `
@@ -2269,7 +2284,7 @@ function openContainer(id){
 
       ${!c.bolComplete ? `<div class="bol-card"><h4>Book of Life — DTI assessment pending</h4>
         <p style="font-size:12.5px;margin-bottom:8px;">DTI has not yet provided the A-Number and C-Number. CPC stages can continue as normal — but examination (stage 11) cannot begin until this is complete.</p>
-        ${canEdit && (isSCTL()||dept==='DTI'||dept==='Admin') ? `
+        ${canEdit && (dept==='DTI'||dept==='Admin') ? `
         <div class="form-grid">
           <div class="field" style="margin-bottom:6px;"><label>A-Number</label><input type="text" id="bol-a" placeholder="A-220000"></div>
           <div class="field" style="margin-bottom:6px;"><label>C-Number</label><input type="text" id="bol-c" placeholder="C-990000"></div>
@@ -2285,7 +2300,7 @@ function openContainer(id){
 
       ${docFixBannerHTML(c)}
       <div class="section-title">Journey — Stage ${c.stageIdx+1} of 15 <span class="dept-chip" style="margin-left:8px;">${STAGE_DEPT[c.stageIdx]}</span></div>
-      ${stageRailHTML(c.stageIdx, !isStaff() && !isSCTL())}
+      ${stageRailHTML(c.stageIdx, !isStaff())}
       <div class="stamp-badge" style="margin-top:8px;">${stage.code} · ${stage.label}</div>
       ${detentionDays!==null?`<div class="hint" style="margin-top:10px;">Free storage window: ${FREE_DAYS} days. Container released ${detentionDays} day(s) ago. ${detentionCost>0?`Projected detention so far: <b>${fmtNaira(detentionCost)}</b>.`:'Still within free period.'}</div>`:''}
 
@@ -2298,18 +2313,18 @@ function openContainer(id){
         <button class="btn small" onclick="updateStage('${c.id}')">Update</button>
         ${!c.steppedDown.status?`<button class="btn small danger" onclick="showStepDownForm('${c.id}')">Step down container</button>`:''}
       </div>
-      ${(isSCTL()||dept==='Admin')?`<div class="toggle-row"><input type="checkbox" id="force-advance"> <label for="force-advance" style="text-transform:none;letter-spacing:0;">Force-advance (override sequence and assessment checks)</label></div>`:''}
+      ${(dept==='Admin')?`<div class="toggle-row"><input type="checkbox" id="force-advance"> <label for="force-advance" style="text-transform:none;letter-spacing:0;">Force-advance (override sequence and assessment checks)</label></div>`:''}
       <div id="stepdown-form-area"></div>` : (canEdit ? `<div class="hint">Your department (${dept}) is not authorized to advance container stages.</div>` : '')}
 
-      ${(c.stageIdx>=10 && canEdit && (isSCTL()||dept==='Operations'||dept==='Admin')) ? `
+      ${(c.stageIdx>=10 && canEdit && (dept==='Operations'||dept==='Admin')) ? `
       <div class="section-title">Seal number (examination)</div>
       <div style="display:flex; gap:8px;"><input type="text" id="seal-exam" value="${c.sealNumber||''}" placeholder="Seal number recorded at examination"><button class="btn small secondary" onclick="saveSealNumber('${c.id}','exam')">Save</button></div>` : (c.sealNumber?`<div class="kv"><b>Seal (examination)</b><span class="mono">${c.sealNumber}</span></div>`:'')}
-      ${(c.stageIdx>=12 && canEdit && (isSCTL()||dept==='Transport'||dept==='Operations'||dept==='Admin')) ? `
+      ${(c.stageIdx>=12 && canEdit && (dept==='Transport'||dept==='Operations'||dept==='Admin')) ? `
       <div class="section-title">Seal number (delivery)</div>
       <div style="display:flex; gap:8px;"><input type="text" id="seal-delivery" value="${c.sealNumberDelivery||''}" placeholder="Seal number confirmed at delivery"><button class="btn small secondary" onclick="saveSealNumber('${c.id}','delivery')">Save</button></div>
       ${c.sealMismatch?`<div class="hint" style="color:var(--rust); font-weight:600;">⚠ Seal mismatch — this container may have been tampered with.</div>`:''}` : ''}
 
-      ${(canEdit && (isSCTL()||dept==='Operations'||dept==='Admin')) ? `
+      ${(canEdit && (dept==='Operations'||dept==='Admin')) ? `
       <div class="section-title">Container placement</div>
       <div class="field"><label>Admin instruction to Operations (optional)</label>
         <select id="placement-instruction">
@@ -2317,7 +2332,7 @@ function openContainer(id){
           <option value="ground" ${c.placementInstruction==='ground'?'selected':''}>Drop on the ground</option>
           <option value="stack" ${c.placementInstruction==='stack'?'selected':''}>Stack on another container</option>
         </select></div>
-      ${(isSCTL()||dept==='Admin')?`<button class="btn small ghost" style="padding-left:0;" onclick="savePlacementInstruction('${c.id}')">Save instruction</button>`:''}
+      ${(dept==='Admin')?`<button class="btn small ghost" style="padding-left:0;" onclick="savePlacementInstruction('${c.id}')">Save instruction</button>`:''}
       <div class="field" style="margin-top:10px;"><label>Actual placement recorded by Operations</label>
         <select id="placement-method" onchange="document.getElementById('placement-target-wrap').style.display=this.value==='stacked'?'inline-block':'none'">
           <option value="">Not yet recorded</option>
@@ -2331,7 +2346,7 @@ function openContainer(id){
       <button class="btn small secondary" onclick="saveContainerPlacement('${c.id}')">Save placement</button>
       ${c.placementActual?`<div class="tag-line" style="margin-top:6px;">Recorded: ${c.placementActual.mode==='stacked'?'stacked with '+c.placementActual.stackedWith:'on the ground'} by ${c.placementActual.by} on ${fmtDate(c.placementActual.date)}</div>`:''}` : ''}
 
-      ${(canEdit && (isSCTL()||dept==='Transport'||dept==='Admin') && c.stageIdx>=12) ? `
+      ${(canEdit && (dept==='Transport'||dept==='Admin') && c.stageIdx>=12) ? `
       <div class="section-title">Transportation</div>
       <div class="form-grid">
         <div class="field"><label>Loading date & time</label><input type="datetime-local" id="loading-datetime" value="${c.loadingDateTime?c.loadingDateTime.slice(0,16):''}"></div>
@@ -2369,10 +2384,10 @@ function openContainer(id){
               <span class="pill ${inv.paymentStatus==='paid'?'ok':'wait'}" style="margin-left:4px;">${inv.paymentStatus}</span></span>
             <span style="display:flex; gap:6px; align-items:center;">
               ${invoiceFileButtonHTML(c, inv, 'ghost')}
-              ${(isImporterAgentOwner)?'':(canEdit && (isSCTL()||dept==='Admin') && inv.status==='pending' ? `<button class="btn small secondary" onclick="reviewInvoice('${c.id}','${inv.id}','approved')">Approve</button><button class="btn small danger" onclick="reviewInvoice('${c.id}','${inv.id}','rejected')">Reject</button>` : '')}
-              ${(canEdit && (isSCTL()||dept==='Accountant'||dept==='Admin') && inv.status==='approved')?`<button class="btn small ghost" onclick="toggleInvoicePayment('${c.id}','${inv.id}')">${inv.paymentStatus==='paid'?'Mark unpaid':'Mark paid'}</button>`:''}
+              ${(isImporterAgentOwner)?'':(canEdit && (dept==='Admin') && inv.status==='pending' ? `<button class="btn small secondary" onclick="reviewInvoice('${c.id}','${inv.id}','approved')">Approve</button><button class="btn small danger" onclick="reviewInvoice('${c.id}','${inv.id}','rejected')">Reject</button>` : '')}
+              ${(canEdit && (dept==='Accountant'||dept==='Admin') && inv.status==='approved')?`<button class="btn small ghost" onclick="toggleInvoicePayment('${c.id}','${inv.id}')">${inv.paymentStatus==='paid'?'Mark unpaid':'Mark paid'}</button>`:''}
             </span></div>`).join('') || '<div class="tag-line">No invoices uploaded yet.</div>'}
-          ${(canEdit && (isSCTL()||dept==='Accountant'||dept==='Admin'))?`
+          ${(canEdit && (dept==='Accountant'||dept==='Admin'))?`
             <div style="margin-top:12px;">
               <div class="field" style="margin-bottom:8px;"><label>Invoice amount (₦)</label><input type="number" id="invoice-amount" value="0"></div>
               <div class="field" style="margin-bottom:8px;"><label>Choose invoice file</label><input type="file" id="invoice-file"></div>
@@ -2381,10 +2396,10 @@ function openContainer(id){
         </div>
         <div>
           <div class="section-title">Financial breakdown</div>
-          ${canEdit && (isSCTL()||dept==='Accountant'||dept==='Admin') ? financeEditRowsHTML(c) : financeReadRowsHTML(c)}
+          ${canEdit && (dept==='Accountant'||dept==='Admin') ? financeEditRowsHTML(c) : financeReadRowsHTML(c)}
           <div class="fin-row" style="font-weight:700; border-top:2px solid var(--ink);"><span>Total</span><span>${fmtNaira(financialTotal)}</span></div>
 
-          ${canEdit && (isSCTL()||dept==='Accountant'||dept==='Admin') ? `
+          ${canEdit && (dept==='Accountant'||dept==='Admin') ? `
           <div class="section-title">Duty payment</div>
           ${c.financial.dutyStatus==='paid' ? `
             <div class="tag-line">Paid on ${fmtDate(c.financial.dutyPaymentDate)} · Ref: <span class="mono">${c.financial.dutyPaymentRef}</span></div>` : `
@@ -2394,7 +2409,7 @@ function openContainer(id){
             </div>
             <button class="btn small" onclick="recordDutyPayment('${c.id}')">Record duty payment</button>`}` : ''}
 
-          ${canEdit && (isSCTL()||dept==='Admin')?`
+          ${canEdit && (dept==='Admin')?`
           <div class="section-title">Raise alert</div>
           <select id="alert-type" style="margin-bottom:8px;">${Object.keys(ALERT_TYPES).map(t=>`<option>${t}</option>`).join('')}</select>
           <textarea id="alert-desc" rows="2" placeholder="Describe the issue…" style="margin-bottom:8px;"></textarea>
@@ -2406,8 +2421,8 @@ function openContainer(id){
   document.getElementById('modal-bg').classList.add('open');
   state.openContainerId = id;
 }
-function canEditJob(c){ return isSCTL() || (isStaff() && FEN_BOL_DEPTS.includes(state.department) && c.terminalId===state.terminalId); }
-function canDeleteJob(c){ return isSCTL() || (isTerminalAdmin() && c.terminalId===state.terminalId); }
+function canEditJob(c){ return (isStaff() && FEN_BOL_DEPTS.includes(state.department) && c.terminalId===state.terminalId); }
+function canDeleteJob(c){ return (isTerminalAdmin() && c.terminalId===state.terminalId); }
 
 /* ========================= EDIT / DELETE A JOB ========================= */
 function jobEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
@@ -3044,10 +3059,61 @@ function customsCommentsHTML(){
 }
 
 /* ========================= INIT ========================= */
+/* Show / Hide button on every password box, including ones drawn later. */
+function addPasswordToggles(){
+  document.querySelectorAll('input[type=password]:not([data-pw])').forEach(inp=>{
+    inp.setAttribute('data-pw','1');
+    const wrap=document.createElement('span'); wrap.className='pw-wrap';
+    inp.parentNode.insertBefore(wrap,inp); wrap.appendChild(inp);
+    const b=document.createElement('button'); b.type='button'; b.className='pw-toggle'; b.textContent='Show'; b.tabIndex=-1;
+    b.addEventListener('click',()=>{ const show=inp.type==='password'; inp.type=show?'text':'password'; b.textContent=show?'Hide':'Show'; });
+    wrap.appendChild(b);
+  });
+}
+new MutationObserver(addPasswordToggles).observe(document.body,{childList:true,subtree:true});
+addPasswordToggles();
+
+function showBusy(msg){
+  let el=document.getElementById('busy-overlay');
+  if(!el){ el=document.createElement('div'); el.id='busy-overlay'; el.innerHTML='<div class="busy-box"><div class="busy-spin"></div><div class="busy-msg"></div></div>'; document.body.appendChild(el); }
+  el.querySelector('.busy-msg').textContent=msg||'Loading…'; el.style.display='flex';
+}
+function hideBusy(){ const el=document.getElementById('busy-overlay'); if(el) el.style.display='none'; }
+
+async function restoreSession(){
+  // The sign-in token lives in localStorage, so a refresh picks the session back up.
+  // The token is only thrown away when the server says it is no longer good, never because a read was slow or failed.
+  const token = getAuthToken(); if(!token) return false;
+  let payload;
+  try{ payload = JSON.parse(atob(token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))); }catch(e){ setAuthToken(''); return false; }
+  if(!payload.id || (payload.exp && payload.exp*1000 < Date.now())){ setAuthToken(''); return false; }
+  const boot = bootStatic();                         // terminals + settings load at the same time as the accounts
+  for(let attempt=0; attempt<3; attempt++){
+    const failsBefore = window.__storageFailures||0;
+    let users = null; try{ users = await loadUsers(); }catch(e){}
+    if(!getAuthToken()) return false;                // the server answered 401: the token is no longer valid
+    if(!users || (window.__storageFailures||0)!==failsBefore){ await new Promise(r=>setTimeout(r,1500)); continue; }  // a failed read: keep the token and try again
+    const u = users.find(x=>x.id===payload.id);
+    if(!u || u.status!=='active'){ setAuthToken(''); return false; }
+    await boot;
+    state.users = users;
+    try{ await finishLogin(u.id); return true; }catch(e){ console.error(e); break; }
+  }
+  state.authError = 'Could not reach the server. You are still signed in: refresh the page to try again.';
+  return false;
+}
 (async function init(){
   if(getApiBase()){
     await tryBootstrapServer();
-    await bootStatic();
+    if(getAuthToken()){
+      showBusy('Restoring your session…');
+      const restored = await restoreSession();
+      hideBusy();
+      if(restored) return;
+      if(!state.terminals || !state.terminals.length) await bootStatic();
+    } else {
+      await bootStatic();
+    }
   }
   renderLogin();
 })();
