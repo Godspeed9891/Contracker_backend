@@ -631,7 +631,20 @@ td,th{border-color:#262628 !important;}
 .tab-bar{border:1px solid #2A2A2D;}
 .section-title{color:#E4E2D4 !important;}
 </style>
-
+<style id="ui-v3">
+/* Alerts and step-down notices: yellow with black writing, like the rest of the pages */
+.alert-card,.stepdown-card{background:#FFC400 !important;border:2px solid #0D0D0E !important;color:#000 !important;}
+.alert-card h4,.alert-card p,.alert-card div,.alert-card span,.alert-card b,.alert-card strong,.alert-card small,.alert-card .hint,
+.stepdown-card h4,.stepdown-card p,.stepdown-card div,.stepdown-card span,.stepdown-card b,.stepdown-card strong,.stepdown-card small,.stepdown-card .hint{color:#000 !important;}
+.alert-card .btn,.stepdown-card .btn{background:#0D0D0E !important;color:#FFC400 !important;border-color:#0D0D0E !important;}
+/* The stage the container has reached blinks like an indicator light */
+@keyframes ctblink{0%{background:#FFC400;border-color:#FFC400;box-shadow:0 0 0 7px rgba(255,196,0,.45),0 0 18px 4px rgba(255,196,0,.85);}
+  50%{background:#0D0D0E;border-color:#FFC400;box-shadow:0 0 0 0 rgba(255,196,0,0);}100%{background:#FFC400;border-color:#FFC400;box-shadow:0 0 0 7px rgba(255,196,0,.45),0 0 18px 4px rgba(255,196,0,.85);}}
+@keyframes ctblinktext{0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;}}
+.rail-step.current .rail-dot{animation:ctblink 1s step-end infinite !important;}
+.rail-step.current .rail-name,.rail-step.current .rail-code{animation:ctblinktext 1s step-end infinite;}
+@media (prefers-reduced-motion:reduce){.rail-step.current .rail-dot,.rail-step.current .rail-name,.rail-step.current .rail-code{animation:none !important;}}
+</style>
 </head>
 <body>
 
