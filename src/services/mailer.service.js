@@ -30,6 +30,21 @@ function chosenProvider() {
   return e.NODE_ENV === 'production' ? 'none' : 'console';
 }
 
+// Reads a setting and removes stray spaces, new lines and quote marks that often sneak in when it is pasted.
+function setting(name) { return String(process.env[name] || '').trim().replace(/^["']+|["']+$/g, '').trim(); }
+
+// Describes the Google settings WITHOUT revealing them, to help find a copy-and-paste mistake.
+function googleSettingsHint() {
+  const id = setting('GMAIL_CLIENT_ID'), secret = setting('GMAIL_CLIENT_SECRET'), rt = setting('GMAIL_REFRESH_TOKEN');
+  const notes = [];
+  if (!id.endsWith('.apps.googleusercontent.com')) notes.push('GMAIL_CLIENT_ID does not end with .apps.googleusercontent.com');
+  if (!secret.startsWith('GOCSPX-')) notes.push('GMAIL_CLIENT_SECRET does not start with GOCSPX-');
+  if (rt.startsWith('ya29.')) notes.push('GMAIL_REFRESH_TOKEN looks like an ACCESS token (starts with ya29.), use the refresh token');
+  else if (!rt.startsWith('1//')) notes.push('GMAIL_REFRESH_TOKEN does not start with 1//');
+  if (/\s/.test(rt) || /\s/.test(id) || /\s/.test(secret)) notes.push('a value contains a space or new line inside it');
+  return 'lengths: id=' + id.length + ' secret=' + secret.length + ' refresh=' + rt.length + (notes.length ? ' | check: ' + notes.join('; ') : ' | formats look normal, so the token and client probably do not belong together');
+}
+
 function notConfigured(what) { const err = new Error(what + ' is not configured.'); err.code = 'MAIL_NOT_CONFIGURED'; return err; }
 
 // ---- Gmail over SMTP (local use) ----
@@ -53,17 +68,17 @@ async function gmailAccessToken() {
   const res = await fetch(TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ client_id: e.GMAIL_CLIENT_ID, client_secret: e.GMAIL_CLIENT_SECRET, refresh_token: e.GMAIL_REFRESH_TOKEN, grant_type: 'refresh_token' }),
+    body: new URLSearchParams({ client_id: setting('GMAIL_CLIENT_ID'), client_secret: setting('GMAIL_CLIENT_SECRET'), refresh_token: setting('GMAIL_REFRESH_TOKEN'), grant_type: 'refresh_token' }),
     signal: AbortSignal.timeout(TIMEOUT_MS)
   });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok || !body.access_token) throw new Error('Google refused the sign-in token (' + res.status + ' ' + (body.error || '') + ' ' + (body.error_description || '') + ')');
+  if (!res.ok || !body.access_token) throw new Error('Google refused the sign-in token (' + res.status + ' ' + (body.error || '') + ' ' + (body.error_description || '') + ') [' + googleSettingsHint() + ']');
   cachedToken = { value: body.access_token, expiresAt: Date.now() + (Number(body.expires_in) || 3000) * 1000 };
   return cachedToken.value;
 }
 async function sendGmailApi({ from, to, subject, text, html }) {
   const e = process.env;
-  if (!(e.GMAIL_CLIENT_ID && e.GMAIL_CLIENT_SECRET && e.GMAIL_REFRESH_TOKEN)) throw notConfigured('The Gmail API');
+  if (!(setting('GMAIL_CLIENT_ID') && setting('GMAIL_CLIENT_SECRET') && setting('GMAIL_REFRESH_TOKEN'))) throw notConfigured('The Gmail API');
   // nodemailer only builds the message here (no network); the Gmail API delivers it.
   const built = await nodemailer.createTransport({ streamTransport: true, buffer: true, newline: 'unix' }).sendMail({ from, to, subject, text, html });
   const raw = built.message.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
