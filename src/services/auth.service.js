@@ -43,6 +43,7 @@ async function register(body) {
   if (typeof profile !== 'object' || Array.isArray(profile)) return fail(400, 'Malformed profile.');
   if (!emailIsVerified(body.verifyToken, mail)) return fail(403, 'Please verify your email address first.');
   if (!SELF_REGISTER_ROLES.includes(profile.role)) return fail(400, 'Invalid account type.');
+    if (typeof profile.idType === 'string') profile.idType = profile.idType.replace(/[<>]/g, '').trim().slice(0, 70);
   const hash = await hashPassword(password);
   let idFileId = null;
   if (typeof profile.idImage === 'string' && profile.idImage) {

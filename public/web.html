@@ -524,6 +524,8 @@ select:focus, input:focus, textarea:focus{outline:none;border-color:var(--ink);b
 .modal-head{position:sticky;top:0;z-index:20;}
 .bol-card h4{color:#C62828 !important;font-weight:800;font-size:14.5px;letter-spacing:.2px;}
 .bol-card{border-left:4px solid #C62828;}
+.alert-card h4{color:#B71C1C !important;font-weight:800;font-size:14.5px;}
+.alert-card{border-left:6px solid #B71C1C !important;}
 </style>
 </head>
 <body>
@@ -1078,7 +1080,8 @@ function idUploadHTML(){
     <h2>Identity Verification</h2>
     <div class="lede">${d.role==='customs' ? 'Upload your Customs Service credential.' : 'Before you can access dashboards, upload a clear photo of your ID for review.'}</div>
     ${state.authError?`<div class="err-text">${state.authError}</div>`:''}
-    <div class="field"><label>ID type</label><select id="id-type">${opts.map(o=>`<option>${o}</option>`).join('')}</select></div>
+      <div class="field"><label>ID type</label><select id="id-type" onchange="document.getElementById('id-type-other-wrap').style.display=this.value==='Other'?'block':'none'">${opts.concat(['Other']).map(o=>`<option>${o}</option>`).join('')}</select></div>
+    <div class="field" id="id-type-other-wrap" style="display:none;"><label>Type of document</label><input type="text" id="id-type-other" maxlength="60" placeholder="e.g. Residence permit, Staff badge, NIN slip"></div>
     <div class="field"><label>Upload ID photo</label><input type="file" id="id-file" accept="image/*"></div>
     <button class="btn full" onclick="submitIdVerification()">Submit for verification</button>
     <div class="auth-foot"><button onclick="setAuthView('register')">‹ Back</button></div>`;
@@ -1227,7 +1230,12 @@ async function shrinkIdImage(file){
 }
 async function submitIdVerification(){
   showBusy('Submitting your details…');
-  const idType = document.getElementById('id-type').value;
+   let idType = document.getElementById('id-type').value;
+  if(idType==='Other'){
+    const typed = (document.getElementById('id-type-other').value||'').trim().slice(0,60);
+    if(!typed){ state.authError='Please type the kind of document you are uploading.'; renderAuthCard(); return; }
+    idType = 'Other: '+typed;
+  }
   const fileInput = document.getElementById('id-file');
   const file = fileInput && fileInput.files && fileInput.files[0];
   if(!file){ state.authError='Please upload a photo of your ID before continuing.'; renderAuthCard(); return; }
