@@ -539,8 +539,6 @@ select:focus, input:focus, textarea:focus{outline:none;border-color:var(--ink);b
 .bol-card{border-left:4px solid #C62828;}
 .alert-card h4{color:#B71C1C !important;font-weight:800;font-size:14.5px;}
 .alert-card{border-left:6px solid #B71C1C !important;}
-.sheet{max-height:86vh;}
-.sheet .sheet-item.danger{position:sticky; bottom:0; background:var(--panel); border-top:1px solid var(--line); padding-bottom:max(13px, env(safe-area-inset-bottom));}
 </style>
 </head>
 <body>
@@ -1031,6 +1029,7 @@ function renderAuthCard(){
   else if(state.authView==='otp') card.innerHTML = otpHTML();
   else if(state.authView==='idupload') card.innerHTML = idUploadHTML();
   else if(state.authView==='pending') card.innerHTML = pendingHTML();
+  else if(state.authView==='forgot') card.innerHTML = forgotHTML();
 }
 function serverSetupHTML(){
   return `
@@ -1064,6 +1063,7 @@ function signInHTML(){
       <div class="field"><label>Password</label><input type="password" id="s-password" required placeholder="••••••••"></div>
       <button class="btn full" type="submit">Sign In</button>
     </form>
+    <div class="auth-foot"><button type="button" onclick="startForgot()">Forgot password?</button></div>
     <div class="auth-foot">New here? <button onclick="setAuthView('register')">Create an account</button></div>
     <div class="auth-foot"><button onclick="setAuthView('welcome')">‹ Back</button></div>`;
 }
@@ -1188,6 +1188,60 @@ async function resendOtp(){
   const ok = await requestOtpCode();
   renderAuthCard();
   if(ok) toast('New code sent.');
+}
+/* ---------- Forgot password: an emailed code, then a new password ---------- */
+function startForgot(){ state.fp = {email:'', sent:false}; setAuthView('forgot'); }
+function forgotHTML(){
+  const f = state.fp || (state.fp = {email:'', sent:false});
+  const err = state.authError ? `<div class="err-text">${state.authError}</div>` : '';
+  if(!f.sent){
+    return `
+      <h2>Forgot password</h2>
+      <div class="lede">Enter the email you sign in with. If it has an account, we will email you a 6-digit code. If you sign in with a username instead of an email, ask your terminal Admin to reset your password.</div>
+      ${err}
+      <div class="field"><label>Email</label><input type="email" id="fp-email" value="${jobEsc(f.email)}" autocomplete="email" placeholder="you@example.com"></div>
+      <button class="btn full" onclick="fpSend()">Send code</button>
+      <div class="auth-foot"><button onclick="setAuthView('signin')">‹ Back to sign in</button></div>`;
+  }
+  return `
+    <h2>Set a new password</h2>
+    <div class="lede">If <b>${jobEsc(f.email)}</b> has an account, a 6-digit code is on its way. It expires in 10 minutes. Check your spam folder if it does not arrive.</div>
+    ${err}
+    <div class="field"><label>6-digit code</label><input type="text" id="fp-code" maxlength="6" inputmode="numeric" autocomplete="one-time-code" placeholder="••••••"></div>
+    <div class="field"><label>New password</label><input type="password" id="fp-pass" autocomplete="new-password" placeholder="At least 6 characters"></div>
+    <div class="field"><label>Confirm new password</label><input type="password" id="fp-pass2" autocomplete="new-password"></div>
+    <button class="btn full" onclick="fpSubmit()">Change password</button>
+    <button class="btn ghost full" style="margin-top:6px;" onclick="fpResend()">Send a new code</button>
+    <div class="auth-foot"><button onclick="setAuthView('signin')">‹ Back to sign in</button></div>`;
+}
+async function fpRequest(email){
+  try{ await apiFetch('/api/auth/forgot-password', {method:'POST', body: JSON.stringify({email})}); return true; }
+  catch(err){ state.authError = err.message || 'Could not send the code. Please try again.'; return false; }
+}
+async function fpSend(){
+  const email = (document.getElementById('fp-email').value||'').trim().toLowerCase();
+  state.fp.email = email; state.authError='';
+  if(!/^\S+@\S+\.\S+$/.test(email)){ state.authError='Enter the email you sign in with.'; renderAuthCard(); return; }
+  if(await fpRequest(email)) state.fp.sent = true;
+  renderAuthCard();
+}
+async function fpResend(){
+  state.authError='';
+  const ok = await fpRequest(state.fp.email);
+  renderAuthCard();
+  if(ok) toast('If that email has an account, a new code was sent.');
+}
+async function fpSubmit(){
+  const code = (document.getElementById('fp-code').value||'').trim();
+  const p1 = document.getElementById('fp-pass').value, p2 = document.getElementById('fp-pass2').value;
+  state.authError='';
+  if(!/^\d{6}$/.test(code)){ state.authError='Enter the 6-digit code.'; renderAuthCard(); return; }
+  if(p1.length<6){ state.authError='Password must be at least 6 characters.'; renderAuthCard(); return; }
+  if(p1!==p2){ state.authError='The two passwords do not match.'; renderAuthCard(); return; }
+  try{ await apiFetch('/api/auth/reset-password', {method:'POST', body: JSON.stringify({email:state.fp.email, code, newPassword:p1})}); }
+  catch(err){ state.authError = err.message || 'Could not change the password. Please try again.'; renderAuthCard(); return; }
+  state.fp = null; state.authView='signin'; state.authError=''; renderAuthCard();
+  toast('Password changed. Sign in with your new password.');
 }
 document.addEventListener('submit', async function(e){
   if(e.target && e.target.id==='signin-form'){
@@ -1360,13 +1414,13 @@ async function finishLogin(userId){
 function logout(){
   if(state._signingOut) return;                 // ignore a second tap while it is happening
   state._signingOut = true;
-  closeMoreSheet();                              // close the menu straight away
+  if(typeof closeMoreSheet==='function') closeMoreSheet();   // close the menu (mobile page only)
   stopLiveSync();
   setAuthToken('');                              // the session ends right away
   showBusy('Signing you out…');
   setTimeout(()=>{
     state.role=null; state.person=null; state.department=null; state.terminalId=null; state.openContainerId=null;
-    closeMoreSheet();
+    if(typeof closeMoreSheet==='function') closeMoreSheet();
     document.getElementById('modal-bg').classList.remove('open');
     renderLogin();
     hideBusy();
@@ -3277,14 +3331,21 @@ function showModalHTML(html){
 }
 const EDIT_FIELDS = [
   ['containerNumber','Container number'], ['billOfLading','Bill of Lading'], ['size','Container size'],
-  ['item','Cargo description'], ['destination','Destination']
+  ['item','Cargo description'], ['destination','Destination'],
+  ['owner','Importer'], ['agent','Clearing agent']
 ];
 function openEditJob(id, draft){
   const c = byId(id); if(!c) return;
   if(!canEditJob(c)){ toast('You do not have permission to edit this job.'); return; }
   if(checkMasterHold()) return;
   state.editingJob = id; state.openContainerId = id;
-  const v = draft || {containerNumber:c.containerNumber, billOfLading:c.billOfLading, size:c.size, item:c.item, destination:c.destination};
+  const v = draft || {containerNumber:c.containerNumber, billOfLading:c.billOfLading, size:c.size, item:c.item, destination:c.destination, owner:c.owner||'', agent:c.agent||''};
+  const people = (role, cur) => {   // the terminal's active importers / agents, plus the current one if they are no longer listed
+    const l = state.users.filter(u=>u.role===role && u.terminalId===c.terminalId && u.status==='active').map(u=>({name:u.name, label:u.name+(u.org?' — '+u.org:'')}));
+    if(cur && !l.some(p=>p.name===cur)) l.push({name:cur, label:cur});
+    return l;
+  };
+  const nameHints = list => list.map(p=>`<option value="${jobEsc(p.name)}"></option>`).join('');
   showModalHTML(`
     <div class="modal-head"><div><div class="tag-line">Edit job information</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
       <button class="btn ghost" onclick="cancelEditJob('${id}')">✕</button></div>
@@ -3296,6 +3357,8 @@ function openEditJob(id, draft){
         <div class="field"><label>Container size *</label><select id="ej-size"><option value="20ft" ${v.size==='20ft'?'selected':''}>20ft</option><option value="40ft" ${v.size==='40ft'?'selected':''}>40ft</option></select></div>
         <div class="field"><label>Cargo description</label><input id="ej-item" value="${jobEsc(v.item)}"></div>
         <div class="field"><label>Destination</label><input id="ej-dest" value="${jobEsc(v.destination)}"></div>
+        <div class="field"><label>Importer name (owner of the job)</label><input id="ej-owner" list="ej-owner-list" value="${jobEsc(v.owner)}" placeholder="Leave empty for an agent-sourced job" autocomplete="off"><datalist id="ej-owner-list">${nameHints(people('importer', v.owner))}</datalist></div>
+        <div class="field"><label>Clearing agent name</label><input id="ej-agent" list="ej-agent-list" value="${jobEsc(v.agent)}" placeholder="Leave empty if there is no agent" autocomplete="off"><datalist id="ej-agent-list">${nameHints(people('agent', v.agent))}</datalist></div>
         <div style="display:flex;gap:8px;margin-top:14px;"><button class="btn" type="submit">Review changes</button>
           <button class="btn secondary" type="button" onclick="cancelEditJob('${id}')">Cancel</button></div>
       </form>
@@ -3305,13 +3368,15 @@ function cancelEditJob(id){ state.editingJob = null; if(byId(id)) openContainer(
 function readEditDraft(){
   return { containerNumber:document.getElementById('ej-cnum').value.trim().toUpperCase(), billOfLading:document.getElementById('ej-bol').value.trim(),
     size:document.getElementById('ej-size').value, item:document.getElementById('ej-item').value.trim() || 'Unspecified cargo',
-    destination:document.getElementById('ej-dest').value.trim() || 'Not specified' };
+    destination:document.getElementById('ej-dest').value.trim() || 'Not specified',
+    owner:document.getElementById('ej-owner').value.trim().slice(0,120), agent:document.getElementById('ej-agent').value.trim().slice(0,120) };
 }
 function reviewEditJob(e, id){
   e.preventDefault();
   const c = byId(id); if(!c){ toast('This job no longer exists.'); closeModal(); return; }
   const d = readEditDraft();
   if(!d.containerNumber || !d.billOfLading){ toast('Container number and Bill of Lading are required.'); return; }
+  if(!d.owner && !d.agent){ toast('A job needs an importer or a clearing agent.'); return; }
   if(state.containers.some(x=>x.id!==id && x.containerNumber===d.containerNumber && x.terminalId===c.terminalId)){ toast('Another job already uses container number ' + d.containerNumber + '.'); return; }
   const changes = EDIT_FIELDS.filter(([k])=>String(c[k]==null?'':c[k])!==String(d[k]));
   if(!changes.length){ toast('Nothing was changed.'); return; }
@@ -3332,7 +3397,7 @@ async function confirmEditJob(id){
   const oldNum = c.containerNumber;
   const changed = EDIT_FIELDS.filter(([k])=>String(c[k]==null?'':c[k])!==String(d[k])).map(([k,label])=>label.toLowerCase());
   state.editingJob = null;
-  EDIT_FIELDS.forEach(([k])=>{ c[k] = d[k]; });
+  EDIT_FIELDS.forEach(([k])=>{ c[k] = ((k==='owner'||k==='agent') && !d[k]) ? null : d[k]; });
   computeDuplicateFlags();
   const ok = await saveContainers(state.containers);
   if(!ok){
@@ -4012,6 +4077,8 @@ function busyMessageFor(path){
   if(/\/auth\/login/.test(path)) return 'Signing you in…';
   if(/\/auth\/send-code/.test(path)) return 'Sending the code…';
   if(/\/auth\/verify-code/.test(path)) return 'Checking the code…';
+  if(/\/auth\/forgot-password/.test(path)) return 'Sending the code…';
+  if(/\/auth\/reset-password/.test(path)) return 'Changing the password…';
   if(/\/auth\/register/.test(path)) return 'Creating the account…';
   if(/\/auth\/set-password/.test(path)) return 'Updating the password…';
   return 'Saving…';

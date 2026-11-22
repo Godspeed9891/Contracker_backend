@@ -6,7 +6,8 @@ const FIELD_LABELS = {
   archived: 'archived status', aNumber: 'A-Number', cNumber: 'C-Number', containerNumber: 'container number', billOfLading: 'Bill of Lading',
   size: 'container size', item: 'cargo description', destination: 'destination',
   alerts: 'alerts', steppedDown: 'stepped-down status', deliveryLocation: 'delivery location',
-  returnDueDate: 'return-by date', leftTerminalDate: 'date left the terminal', returnedDate: 'date returned to the wharf'
+  returnDueDate: 'return-by date', leftTerminalDate: 'date left the terminal', returnedDate: 'date returned to the wharf',
+  owner: 'importer', agent: 'clearing agent'
 };
 const labelOf = k => FIELD_LABELS[k] || k;
 
@@ -46,7 +47,7 @@ const CAP_DEPTS = {
   returnDates: ['Admin', 'Documentation', 'DTI', 'Transport']
 };
 const FIELD_CAPS = {
-  containerNumber: 'fen', billOfLading: 'fen', size: 'fen', item: 'fen', destination: 'fen',
+  containerNumber: 'fen', billOfLading: 'fen', size: 'fen', item: 'fen', destination: 'fen', owner: 'fen', agent: 'fen',
   bolComplete: 'bol', aNumber: 'bol', cNumber: 'bol',
   alerts: 'alert', steppedDown: 'stepDown', exitNumber: 'exit',
   transporter: 'transporter', transportHistory: 'transporter',

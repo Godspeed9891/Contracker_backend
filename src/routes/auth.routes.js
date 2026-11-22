@@ -24,6 +24,8 @@ function credentialsOnlyNeedsAdmin(req, res, next) {
 router.post('/register', registerLimiter, credentialsOnlyNeedsAdmin, auth.register);
 router.post('/send-code', sendCodeLimiter, auth.sendCode);
 router.post('/verify-code', verifyCodeLimiter, auth.verifyCode);
+router.post('/forgot-password', sendCodeLimiter, auth.forgotPassword);
+router.post('/reset-password', verifyCodeLimiter, auth.resetPassword);
 router.post('/login', loginPerAddress, loginPerAccount, auth.login);
 router.post('/set-password', authRequired, auth.setPassword);
 router.post('/change-email', authRequired, auth.changeEmail);

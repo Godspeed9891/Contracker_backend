@@ -7,7 +7,9 @@ const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/env');
 const otpModel = require('../models/otp.model');
-const { loginInUse } = require('../models/user.model');
+const { loginInUse, findUserById } = require('../models/user.model');
+const credentialModel = require('../models/credential.model');
+const { hashPassword } = require('../utils/password');
 const { sendMail } = require('./mailer.service');
 
 const LIFE_MINUTES = 10;
@@ -17,7 +19,7 @@ const PURPOSE = 'register';
 const EMAIL_OK = /^\S+@\S+\.\S+$/;
 
 const fail = (status, message) => ({ status, body: { error: message } });
-const hashOf = (email, code) => crypto.createHmac('sha256', JWT_SECRET).update(email + ':' + PURPOSE + ':' + code).digest('hex');
+const hashOf = (email, code, purpose = PURPOSE) => crypto.createHmac('sha256', JWT_SECRET).update(email + ':' + purpose + ':' + code).digest('hex');
 const same = (a, b) => { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && crypto.timingSafeEqual(x, y); };
 
 async function sendCode(body) {
@@ -80,5 +82,59 @@ function emailIsVerified(token, email) {
     return p.typ === 'email-verified' && p.email === String(email).trim().toLowerCase();
   } catch (e) { return false; }
 }
+// Forgot password: a code goes to the account's email. The answer never says whether the account exists.
+const RESET = 'reset';
+async function sendResetCode(body) {
+  const email = String(body.email || '').trim().toLowerCase();
+  if (!EMAIL_OK.test(email)) return fail(400, 'Enter the email address you sign in with.');
+  const generic = { status: 200, body: { ok: true, expiresInMinutes: LIFE_MINUTES } };
+  const cred = await credentialModel.findByEmail(email);
+  if (!cred) return generic;
+  const profile = await findUserById(cred.user_id);
+  if (!profile || (profile.status && profile.status !== 'active')) return generic;
+  const existing = await otpModel.find(email, RESET);
+  if (existing && (Date.now() - new Date(existing.created_at).getTime()) / 1000 < RESEND_SECONDS) return generic;
 
-module.exports = { sendCode, verifyCode, emailIsVerified };
+  const code = String(crypto.randomInt(100000, 1000000));
+  await otpModel.save(email, RESET, hashOf(email, code, RESET), LIFE_MINUTES);
+  try {
+    await sendMail({
+      to: email,
+      subject: 'Your ConTracker password reset code',
+      text: 'Your ConTracker password reset code is ' + code + '.\nIt expires in ' + LIFE_MINUTES + ' minutes. If you did not ask to reset your password, ignore this email; your password has not changed.',
+      html: '<div style="font-family:Arial,sans-serif;font-size:15px;color:#111">' +
+            '<p>Your ConTracker password reset code is:</p>' +
+            '<p style="font-size:30px;letter-spacing:6px;font-weight:700;margin:12px 0">' + code + '</p>' +
+            '<p>It expires in ' + LIFE_MINUTES + ' minutes. If you did not ask to reset your password, ignore this email; your password has not changed.</p></div>'
+    });
+  } catch (e) {
+    await otpModel.remove(email, RESET);
+    console.error('Could not send the password reset email:', e.code === 'MAIL_NOT_CONFIGURED' ? e.message : e);
+  }
+  return generic;
+}
+
+async function resetPassword(body) {
+  const email = String(body.email || '').trim().toLowerCase();
+  const code = String(body.code || '').trim();
+  const newPassword = String(body.newPassword || '');
+  if (!EMAIL_OK.test(email) || !/^\d{6}$/.test(code)) return fail(400, 'Enter the 6-digit code.');
+  if (newPassword.length < 6) return fail(400, 'Password must be at least 6 characters.');
+
+  const row = await otpModel.find(email, RESET);
+  if (!row) return fail(400, 'No code is waiting for that email. Ask for a new one.');
+  if (new Date(row.expires_at).getTime() < Date.now()) { await otpModel.remove(email, RESET); return fail(400, 'That code has expired. Ask for a new one.'); }
+  if (row.attempts >= MAX_WRONG) { await otpModel.remove(email, RESET); return fail(429, 'Too many wrong codes. Ask for a new one.'); }
+  if (!same(hashOf(email, code, RESET), row.code_hash)) {
+    const used = await otpModel.addAttempt(email, RESET);
+    if (used >= MAX_WRONG) { await otpModel.remove(email, RESET); return fail(429, 'Too many wrong codes. Ask for a new one.'); }
+    return fail(400, 'Incorrect code. ' + (MAX_WRONG - used) + ' tries left.');
+  }
+  const cred = await credentialModel.findByEmail(email);
+  const profile = cred && await findUserById(cred.user_id);
+  if (!profile || (profile.status && profile.status !== 'active')) { await otpModel.remove(email, RESET); return fail(400, 'This account cannot be reset right now.'); }
+  await credentialModel.updatePassword(email, await hashPassword(newPassword));
+  await otpModel.remove(email, RESET);
+  return { status: 200, body: { ok: true } };
+}
+module.exports = { sendCode, verifyCode, emailIsVerified, sendResetCode, resetPassword };
