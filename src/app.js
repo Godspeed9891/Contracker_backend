@@ -32,6 +32,7 @@ app.use(helmet({
     })
   }
 }));
+
 // Which other websites may talk to this server. The app and the API are on the same address, so this normally stays
 // empty; add a comma-separated list on Render (ALLOWED_ORIGINS) only if you ever host a page somewhere else.
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
@@ -48,6 +49,9 @@ app.use('/api', (req, res, next) => {
   if (host === req.headers.host || allowedOrigins.includes(origin)) return next();
   return res.status(403).json({ error: 'Request blocked.' });
 });
+
+app.use(express.json({ limit: '25mb' })); // user ID photos / profile pictures are embedded as base64 data URLs
+
 app.use(pagesRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/storage', storageRoutes);
