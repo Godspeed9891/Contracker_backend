@@ -17,7 +17,18 @@ const RESTORABLE_ROLES = ['importer', 'agent', 'admin', 'customs', 'sctl'];
 
 const reply = (status, body, changed) => ({ status, body, changed });
 const fail = (status, message) => reply(status, { error: message });
+
+const crypto = require('crypto');
+
+function generatePassword() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789';
+  let s = '';
+  for (let i = 0; i < 10; i++) s += chars[crypto.randomInt(chars.length)];
+  return s;
+}
 const ok = (extra, changed) => reply(200, Object.assign({ ok: true }, extra), changed);
+
+const clip = (v, n) => (typeof v === 'string' ? v.replace(/[<>]/g, '').trim().slice(0, n) : '');
 
 // Two modes:
 //  - With `profile`: public self-registration. The server itself appends the
@@ -34,6 +45,7 @@ async function register(body) {
   const mail = String(email).toLowerCase();
 
   if (!profile) {
+    if (await findUserById(id)) return fail(409, 'That account id is already in use.');
     if (await credentialModel.exists(mail)) return fail(409, 'That email is already registered. Try signing in.');
     const hash = await hashPassword(password);
     await credentialModel.insert(mail, hash, id);
@@ -81,8 +93,25 @@ async function register(body) {
       // sign-up attempt that failed half-way; replace it instead of blocking.
       await credentialModel.removeByEmail(mail, client);
       await credentialModel.insert(mail, hash, id, client);
-      const clean = Object.assign({}, profile, { id, login: String(email).trim(), terminalId, status: 'pending_verification', verifiedBy: null, verifiedDate: null });
-      delete clean.password;
+          // Only the fields the sign-up form sends; everything else the browser adds is dropped.
+      let department = null;
+      if (profile.role === 'admin') {
+        department = newTerminal ? 'Admin' : clip(profile.department, 40);
+        if (!department || department.toLowerCase() === 'admin') {
+          return { rollback: true, response: fail(400, 'Choose your department.') };
+        }
+      }
+      const name = clip(profile.name, 100);
+      if (!name) return { rollback: true, response: fail(400, 'Please enter your name.') };
+      const clean = {
+        id, login: String(email).trim(), name,
+        phone: clip(profile.phone, 30), org: clip(profile.org, 120),
+        role: profile.role, department, terminalId, status: 'pending_verification',
+        uniqueId: clip(profile.uniqueId, 40), stationedAt: clip(profile.stationedAt, 80),
+        profilePic: null, corporateRegNumber: null,
+        idType: clip(profile.idType, 70), idFileName: clip(profile.idFileName, 120),
+        isNewTerminalAdmin: !!newTerminal, verifiedBy: null, verifiedDate: null
+      };
       delete clean.idImage;
       if (idFileId) clean.idFileId = idFileId;
       users.push(clean);
@@ -136,6 +165,7 @@ async function setPassword(user, body) {
 }
 
 async function resetSeedCredentials(user, body) {
+  if (process.env.ALLOW_DEMO_TOOLS !== 'on') return fail(404, 'Not found.');
   if (!isSctl(user)) return fail(403, 'Only SCTL can reset demo data.');
   const { accounts } = body;
   if (!Array.isArray(accounts)) return fail(400, 'accounts[] is required.');
@@ -150,6 +180,7 @@ async function resetSeedCredentials(user, body) {
 // Admin only: put back any starter (demo) accounts that are missing on this server, without touching accounts that exist.
 // A missing profile is added; a missing password is set to the starter password. Existing passwords are never changed.
 async function restoreDemoAccounts(user, body) {
+  if (process.env.ALLOW_DEMO_TOOLS !== 'on') return fail(404, 'Not found.');
   const myTerminal = user.terminalId;
   if (!isSctl(user) && !isTerminalAdmin(user)) return fail(403, 'Only SCTL or a terminal Admin can restore demo accounts.');
   const { accounts, users: profiles } = body;
@@ -189,4 +220,88 @@ async function restoreDemoAccounts(user, body) {
   return ok({ addedProfiles, fixedPasswords }, addedProfiles.length ? ['users'] : undefined);
 }
 
-module.exports = { register, login, setPassword, resetSeedCredentials, restoreDemoAccounts };
+async function changeEmail(user, body) {
+  const { userId } = body;
+  const mail = String(body.newEmail || '').trim().toLowerCase();
+  if (!userId || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return fail(400, 'A valid new email is required.');
+  const target = await findUserById(userId);
+  if (!target) return fail(404, 'No such account.');
+  const self = target.id === user.id;
+  const allowed = self || isSctl(user) || (isTerminalAdmin(user) && target.terminalId === user.terminalId && target.role !== 'sctl');
+  if (!allowed) return fail(403, 'You do not have permission to change this email.');
+  if (self && !emailIsVerified(body.verifyToken, mail)) return fail(403, 'Please verify the new email address first.');
+
+  try {
+    const outcome = await withTransaction(async client => {
+      const row = await kvLock(client, 'users');
+      const users = (row && row.value) || [];
+      const i = users.findIndex(u => u.id === userId);
+      if (i < 0) return { rollback: true, response: fail(404, 'No such account.') };
+      if (String(users[i].login || '').toLowerCase() === mail) return { rollback: true, response: ok({ email: mail }) };
+      if (users.some(u => u.id !== userId && String(u.login || '').toLowerCase() === mail)) {
+        return { rollback: true, response: fail(409, 'That email is already in use.') };
+      }
+      const taken = await client.query('SELECT 1 FROM credentials WHERE email = $1', [mail]);
+      if (taken.rowCount) return { rollback: true, response: fail(409, 'That email is already in use.') };
+      const moved = await client.query('UPDATE credentials SET email = $1 WHERE user_id = $2', [mail, userId]);
+      if (!moved.rowCount) return { rollback: true, response: fail(404, 'This account has no sign-in record.') };
+      users[i] = Object.assign({}, users[i], { login: String(body.newEmail).trim() });
+      await kvUpsert(client, 'users', users);
+      return {};
+    });
+    if (outcome.response) return outcome.response;
+  } catch (e) {
+    console.error('change email failed:', e);
+    return fail(500, 'Could not change the email. Please try again.');
+  }
+  // The old token carries the old email, so a person changing their own email gets a fresh token.
+  const extra = { email: mail };
+  if (self) extra.token = signToken({ id: target.id, email: mail, role: target.role, department: target.department || null, terminalId: target.terminalId || null });
+  return ok(extra, ['users']);
+}
+
+async function createClientAccount(user, body) {
+  if (user.role !== 'admin' || user.department !== 'Admin') return fail(403, 'Only your terminal\'s Admin can create importer and agent accounts.');
+  if (!['importer', 'agent'].includes(body.role)) return fail(400, 'Choose importer or agent.');
+  const mail = String(body.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) return fail(400, 'A valid email is required.');
+  const name = clip(body.name, 100);
+  if (!name) return fail(400, 'Please enter a name.');
+  let password = typeof body.password === 'string' && body.password ? body.password : null;
+  if (password && password.length < 6) return fail(400, 'Password must be at least 6 characters.');
+  const generated = !password;
+  if (generated) password = generatePassword();
+
+  const admin = await findUserById(user.id);
+  const id = 'u' + Date.now() + crypto.randomInt(1000);
+  const hash = await hashPassword(password);
+  try {
+    const outcome = await withTransaction(async client => {
+      const row = await kvLock(client, 'users');
+      if (!row.exists) return { rollback: true, response: fail(503, 'The server has not been set up yet.') };
+      const users = row.value || [];
+      if (users.some(u => String(u.login || '').toLowerCase() === mail)) {
+        return { rollback: true, response: fail(409, 'That email is already registered.') };
+      }
+      await credentialModel.removeByEmail(mail, client);   // leftover from a failed earlier attempt
+      await credentialModel.insert(mail, hash, id, client);
+      users.push({
+        id, login: String(body.email).trim(), name,
+        phone: clip(body.phone, 30), org: clip(body.org, 120),
+        role: body.role, department: null, terminalId: user.terminalId,
+        status: 'active', uniqueId: clip(body.uniqueId, 40) || ('CT-' + crypto.randomInt(100000, 999999)),
+        stationedAt: '', profilePic: null, corporateRegNumber: clip(body.corporateRegNumber, 60) || null,
+        idType: '', verifiedBy: admin ? admin.name : null, verifiedDate: new Date().toISOString()
+      });
+      await kvUpsert(client, 'users', users);
+      return {};
+    });
+    if (outcome.response) return outcome.response;
+  } catch (e) {
+    console.error('create client account failed:', e);
+    return fail(500, 'Could not create the account. Please try again.');
+  }
+  return ok({ userId: id, email: mail, password: generated ? password : undefined }, ['users']);
+}
+
+module.exports = { register, login, setPassword, resetSeedCredentials, restoreDemoAccounts, changeEmail, createClientAccount };

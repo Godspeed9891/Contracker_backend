@@ -7,6 +7,7 @@ const { hashPassword } = require('../utils/password');
 const fail = (status, message) => ({ status, body: { error: message } });
 
 async function bootstrapDemoData(body) {
+  if (process.env.ALLOW_BOOTSTRAP !== 'on') return fail(404, 'Not found.');
   const existingUsers = await kvGet('users');
   if (existingUsers !== null) return fail(409, 'Already initialized.');
   const { collections, accounts } = body;

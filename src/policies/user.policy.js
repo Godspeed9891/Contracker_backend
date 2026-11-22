@@ -18,9 +18,10 @@ function sameUserRecord(a, b) {
   return true;
 }
 
-// Fields that decide what a person is allowed to do. Nobody except SCTL may change these on their OWN record,
-// and only SCTL may ever hand out the 'sctl' role.
-const PROTECTED_USER_KEYS = ["role", "department", "terminalId", "status"];
+// Fields that decide what a person is allowed to do. Nobody may change these on their OWN record (only SCTL can),
+// a terminal Admin may change them on other accounts at their own terminal, and only SCTL may ever hand out the
+// 'sctl' role or move an account to another terminal.
+const PROTECTED_USER_KEYS = ["role", "department", "terminalId", "status", "grants"];
 function protectedFieldChanged(oldU, newU) {
   return PROTECTED_USER_KEYS.some((k) => {
     if (
@@ -31,6 +32,8 @@ function protectedFieldChanged(oldU, newU) {
     return !looseEqual(oldU[k], newU[k], k);
   });
 }
+
+const OWN_PROTECTED = "You cannot change your own account type, department, terminal, status or permissions.";
 
 function checkUsersWrite(oldArr, newArr, authUser) {
   oldArr = Array.isArray(oldArr) ? oldArr : [];
@@ -49,7 +52,7 @@ function checkUsersWrite(oldArr, newArr, authUser) {
     const added = newArr.find((u) => !oldById.has(u.id));
     if (!added || added.status !== "pending_verification")
       return "Sign in required.";
-     if (added.role === 'sctl') return 'Sign in required.';
+    if (added.role === "sctl" || added.grants) return "Sign in required.";
     return null;
   }
 
@@ -71,18 +74,27 @@ function checkUsersWrite(oldArr, newArr, authUser) {
         (newU && newU.terminalId === authUser.terminalId);
       if (!belongsToMyTerminal)
         return "You can only manage accounts at your own terminal.";
+      if (newU) {
+        // an added or changed account must stay at this terminal and can never become SCTL
+        if (newU.terminalId !== authUser.terminalId)
+          return "You can only manage accounts at your own terminal.";
+        if (newU.role === "sctl") return "Only SCTL can create or change an SCTL account.";
+      }
+      if (id === authUser.id && oldU && newU && protectedFieldChanged(oldU, newU))
+        return OWN_PROTECTED;
     }
     return null;
   }
 
-  // Everyone else: may only ever change their own record, no add/remove.
+  // Everyone else: may only ever change their own record, no add/remove, and never the fields that grant power.
   if (newArr.length !== oldArr.length)
     return "You do not have permission to add or remove accounts.";
   for (const [id, newU] of newById) {
     const oldU = oldById.get(id);
     if (!oldU) return "You do not have permission to add or remove accounts.";
-    if (!sameUserRecord(oldU, newU) && id !== authUser.id)
-      return "You can only update your own profile.";
+    if (sameUserRecord(oldU, newU)) continue;
+    if (id !== authUser.id) return "You can only update your own profile.";
+    if (protectedFieldChanged(oldU, newU)) return OWN_PROTECTED;
   }
   return null;
 }
@@ -90,6 +102,8 @@ function checkUsersWrite(oldArr, newArr, authUser) {
 module.exports = {
   USER_DEFAULTS,
   SERVER_OWNED_USER_KEYS,
+  PROTECTED_USER_KEYS,
   sameUserRecord,
+  protectedFieldChanged,
   checkUsersWrite,
 };

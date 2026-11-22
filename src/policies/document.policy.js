@@ -13,11 +13,25 @@ function isClientDocOf(c, d) {
   return !d.uploadedByRole && (d.uploadedBy === c.owner || d.uploadedBy === c.agent);
 }
 
-// Rules for every change to a job's documents (and the files behind documents and invoices).
+// A terminal's Admin department may correct the name or type of an existing document. Nothing else about it may change.
+function adminDocCorrection(c, p, n, nd) {
+  if (!deepEqual(withoutKeys(p, ['name', 'type', 'id']), withoutKeys(n, ['name', 'type', 'id']))) return 'Only the name and type of a document can be corrected.';
+  if (typeof n.name !== 'string' || !n.name.trim() || n.name.length > 200) return 'Invalid document name.';
+  if (n.type !== p.type) {
+    const allowed = isClientDocOf(c, p) ? CLIENT_DOC_TYPES : STAFF_DOC_TYPES;
+    if (!allowed.includes(n.type)) return 'Unknown document type.';
+    if (nd.some(x => x && x.replaces === p.id)) return 'This document has been replaced, so its type cannot change.';
+  }
+  return null;
+}
+
+// Rules for every change to a job's documents (and the files behind documents and in
+// voices).
 // Returns null if fine, or a plain-language reason.
 async function checkDocumentChanges(oldArr, newArr, user, profile) {
   const oldById = new Map(oldArr.map(c => [c.id, c]));
   const isClient = user.role === 'importer' || user.role === 'agent';
+  const adminFix = !isClient && user.role === 'admin' && user.department === 'Admin';
   for (const c of newArr) {
     const prev = oldById.get(c.id);
     if (!prev) continue;
@@ -42,6 +56,11 @@ async function checkDocumentChanges(oldArr, newArr, user, profile) {
       if (deepEqual(p, n)) continue;
       if (!n || typeof n !== 'object') return 'Invalid document.';
       if (p.id && n.id !== p.id) return 'Existing documents cannot be changed. Upload the corrected one instead.';
+            if (adminFix && (p.name !== n.name || p.type !== n.type)) {
+        const why = adminDocCorrection(c, p, n, nd);
+        if (why) return why;
+        continue;
+      }
       const n2 = withoutKeys(n, ['rejected']);
       if (!deepEqual(withoutKeys(p, ['id']), withoutKeys(n2, ['id']))) return 'Existing documents cannot be changed. Upload the corrected one instead.';
       if (!n.rejected) {

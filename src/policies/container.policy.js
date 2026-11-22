@@ -2,14 +2,14 @@ const { deepEqual, isBlankVal, looseEqual } = require('../utils/compare');
 const { kvGet } = require('../models/kv.model');
 const { isSctl } = require('./role.policy');
 const { FEN_BOL_DEPTS, DEFAULT_DEPT_STAGE_ACCESS, DERIVED_CONTAINER_KEYS } = require('../constants/stages');
-const { labelOf, RESTRICTED_CONTAINER_FIELDS } = require('../constants/containerFields');
+const { labelOf, CAP_DEPTS, FIELD_CAPS } = require('../constants/containerFields');
 
 // A job counts as "untouched" while nothing but its registration exists. Only
 // such a job may be permanently deleted; anything with work on it can only be archived.
 function isUntouchedJob(c) {
   if ((c.stageIdx || 0) !== 0) return false;
   for (const k of ['documents', 'alerts', 'invoices', 'transportHistory', 'progressNotes', 'transporter', 'transferLetterNumber',
-                   'invoiceNumber', 'exitNumber', 'aNumber', 'cNumber']) if (!isBlankVal(c[k])) return false;
+                   'invoiceNumber', 'exitNumber', 'aNumber', 'cNumber', 'returnDueDate', 'leftTerminalDate', 'returnedDate']) if (!isBlankVal(c[k])) return false;
   if (c.bolComplete) return false;
   if (Array.isArray(c.history) && c.history.length > 1) return false;
   const f = Object.assign({}, c.financial || {}); delete f.processingCharge; delete f.dutyStatus;
@@ -29,7 +29,7 @@ function changedContainerKeys(prev, next) {
 
 function jobVisibleTo(user, profile, c) {
   if (user.role === 'sctl') return true;
-  if (c.archived) return user.role === 'admin' && user.department === 'Admin' && c.terminalId === user.terminalId;
+  if (c.archived) return user.role === 'admin' && c.terminalId === user.terminalId && hasCap(user, profile, 'archiveView');
   if (user.role === 'customs') return true;                // read-only, across terminals
   if (c.terminalId !== user.terminalId) return false;      // everyone else: their own terminal only
   if (user.role === 'admin') return true;
@@ -73,6 +73,16 @@ function checkClientJobWrite(oldArr, newArr, profile) {
   return null;
 }
 
+// Can this staff member do this? Admin department: always. Otherwise their own on/off setting wins, then the department default.
+function hasCap(authUser, profile, cap) {
+  if (!authUser || authUser.role !== 'admin') return false;
+  if (authUser.department === 'Admin') return true;
+  const g = profile && profile.grants && profile.grants.caps ? profile.grants.caps[cap] : undefined;
+  if (g === true) return true;
+  if (g === false) return false;
+  return !!CAP_DEPTS[cap] && CAP_DEPTS[cap].includes(authUser.department);
+}
+
 // Checks a proposed write to the `containers` collection. SCTL bypasses
 // entirely (including deleting). Every other staff account is scoped to its
 // OWN terminal — a job at another terminal can't be touched at all — and the
@@ -112,7 +122,7 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
   for (const c of newArr) {
     if (!oldById.has(c.id)) {
       if (c.terminalId !== myTerminal) return 'You can only register jobs at your own terminal.';
-      if (!FEN_BOL_DEPTS.includes(dept)) return 'Only Admin, Documentation, or DTI staff can register a new job.';
+      if (!hasCap(authUser, profile, 'fen')) return 'You are not allowed to register a new job.';
     }
   }
   for (const c of oldArr) {
@@ -122,7 +132,7 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
     }
   }
 
-  let stageAccessCache = null;
+  let stageCache = null;
   for (const c of newArr) {
     const prev = oldById.get(c.id);
     if (!prev) continue;
@@ -133,21 +143,41 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
     }
     for (const k of changed) {
       if (k === 'stageIdx') {
-        if (stageAccessCache === null) {
+        if (stageCache === null) {
           const settings = await kvGet('platform-settings');
-          stageAccessCache = (settings && settings.deptStageAccess) || {};
+          const terminals = await kvGet('terminals');
+          const mine = (Array.isArray(terminals) ? terminals : []).find(t => t.id === myTerminal);
+          stageCache = {
+            platform: (settings && settings.deptStageAccess) || {},
+            own: (mine && mine.deptStageAccess) || {}
+          };
         }
+        const granted = profile && profile.grants && Array.isArray(profile.grants.stages) ? profile.grants.stages : null;
         const access = (dept === 'Admin')
-          ? null // a terminal's Admin may set any stage, matching the app's own rule for that role
-          : (stageAccessCache[dept] || DEFAULT_DEPT_STAGE_ACCESS[dept] || []);
+          ? null // a terminal's Admin may set any stage
+          : (granted || (Array.isArray(stageCache.own[dept]) ? stageCache.own[dept] : (stageCache.platform[dept] || DEFAULT_DEPT_STAGE_ACCESS[dept] || [])));
         if (access && !access.includes(c[k]) && !access.includes(prev[k])) {
           return 'The ' + dept + ' department is not allowed to move ' + c.containerNumber + ' to that stage.';
         }
         continue;
       }
-      const allowedDepts = RESTRICTED_CONTAINER_FIELDS[k];
-      if (allowedDepts && !allowedDepts.includes(dept)) {
-        return 'The ' + dept + ' department is not allowed to change the ' + labelOf(k) + ' on ' + c.containerNumber + '.';
+      if (k === 'exitNumber' && c[k] !== null && c[k] !== undefined && c[k] !== '' && !/^X \d{1,12}$/.test(String(c[k]))) {
+        return 'The exit number must be the letter X, a space, then the number (for example X 1776).';
+      }
+            if (k === 'archived' && c[k]) {
+        const a = c[k];
+        if (typeof a !== 'object' || Array.isArray(a) || (profile && a.by !== profile.name) ||
+            (a.reason !== undefined && a.reason !== null && (typeof a.reason !== 'string' || a.reason.length > 500))) {
+          return 'Invalid archive record.';
+        }
+      }
+            if ((k === 'returnDueDate' || k === 'leftTerminalDate' || k === 'returnedDate') && c[k] !== null && c[k] !== undefined && c[k] !== '') {
+        const d = String(c[k]);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || isNaN(new Date(d + 'T00:00:00Z'))) return 'The ' + labelOf(k) + ' must be a valid date.';
+      }
+      const cap = FIELD_CAPS[k];
+      if (cap && !hasCap(authUser, profile, cap)) {
+        return 'You are not allowed to change the ' + labelOf(k) + ' on ' + c.containerNumber + '.';
       }
     }
   }
@@ -155,6 +185,6 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
 }
 
 module.exports = {
-  isUntouchedJob, changedContainerKeys, jobVisibleTo, canSeeStaffNotes,
+  isUntouchedJob, changedContainerKeys, jobVisibleTo, canSeeStaffNotes, hasCap,
   checkInvoiceAppend, CLIENT_DOC_TYPES, checkClientJobWrite, checkContainersWrite
 };

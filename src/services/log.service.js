@@ -28,7 +28,7 @@ function mergeLog(full, parsed, user, replace, profile) {
     }
   }
   let kept;
-  if (replace) kept = full.filter(e => incoming.has(e.id)).map(e => mergeAck(e, incoming.get(e.id)));
+  if (replace) kept = full.filter(e => !logVisibleTo(user, e) || incoming.has(e.id)).map(e => incoming.has(e.id) ? mergeAck(e, incoming.get(e.id)) : e);
   else kept = full.map(e => (logVisibleTo(user, e) && incoming.has(e.id)) ? mergeAck(e, incoming.get(e.id)) : e); // nobody else can delete history
   return fresh.concat(kept).slice(0, 1000);
 }

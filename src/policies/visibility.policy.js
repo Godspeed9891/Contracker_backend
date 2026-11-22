@@ -1,13 +1,19 @@
 const { isSctl } = require('./role.policy');
 
+// Finance activity belongs to the terminal's Accounts department; SCTL does not see it.
+const FINANCE_LOG_RE = /^(Financial breakdown updated|Duty payment recorded|Invoice uploaded|Invoice on .* (approved|rejected)|Invoice payment status)/;
+function isFinanceLog(e) { return !!e && (e.dept === 'Accountant' || FINANCE_LOG_RE.test(String(e.msg || ''))); }
+const isAccountsUser = u => !!u && u.role === 'admin' && u.department === 'Accountant';
+
 function isStaffUser(u) { return !!u && (u.role === 'admin' || u.role === 'sctl'); }
 function isTopUser(u) { return isSctl(u); }
 function logVisibleTo(user, e) {
-  if (isSctl(user)) return true;
+  if (isSctl(user)) return !isFinanceLog(e);
   return user.role === 'admin' && e.terminalId === user.terminalId;
 }
 function userVisibleTo(user, u) {
-  if (isSctl(user) || u.id === user.id) return true;
+  if (u.id === user.id) return true;
+  if (isSctl(user)) return !isAccountsUser(u);
   return user.role === 'admin' && u.terminalId === user.terminalId;
 }
 function canSeeIdImage(user, u) {
@@ -30,6 +36,6 @@ function stampTerminal(e, user) { return isSctl(user) ? e : Object.assign({}, e,
 function messageVisibleTo(user, profile, m) { return channelAllowed(user, profile, m.channel, m); }
 
 module.exports = {
-  isStaffUser, isTopUser, logVisibleTo, userVisibleTo, canSeeIdImage,
+  isStaffUser, isTopUser, logVisibleTo, userVisibleTo, canSeeIdImage, isFinanceLog,
   referralVisibleTo, canEditReferralStatus, channelAllowed, stampTerminal, messageVisibleTo
 };

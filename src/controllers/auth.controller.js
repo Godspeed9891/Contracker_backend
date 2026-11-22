@@ -14,5 +14,7 @@ const login = async (req, res) => send(res, await authService.login(req.body || 
 const setPassword = async (req, res) => send(res, await authService.setPassword(req.user, req.body || {}));
 const resetSeedCredentials = async (req, res) => send(res, await authService.resetSeedCredentials(req.user, req.body || {}));
 const restoreDemoAccounts = async (req, res) => send(res, await authService.restoreDemoAccounts(req.user, req.body || {}));
+const changeEmail = async (req, res) => send(res, await authService.changeEmail(req.user, req.body || {}));
+const createClientAccount = async (req, res) => send(res, await authService.createClientAccount(req.user, req.body || {}));
 
-module.exports = catchAll({ register, sendCode, verifyCode, login, setPassword, resetSeedCredentials, restoreDemoAccounts });
+module.exports = catchAll({ register, sendCode, verifyCode, login, setPassword, resetSeedCredentials, restoreDemoAccounts, changeEmail, createClientAccount });
