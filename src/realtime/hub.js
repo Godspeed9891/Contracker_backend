@@ -3,7 +3,7 @@
 // now lives in server.js. The connection handler and broadcastChanged are unchanged.
 
 const { WebSocketServer } = require("ws");
-const { userFromToken } = require("../utils/token");
+const { userFromToken, tokenFromRequest } = require("../utils/token");
 const { JWT_SECRET } = require("../config/env");
 
 const sockets = new Set();
@@ -14,7 +14,7 @@ function attach(server) {
   wss.on("connection", (ws, req) => {
     try {
       const url = new URL(req.url, "http://x");
-      const token = url.searchParams.get("token");
+      const token = tokenFromRequest(req) || url.searchParams.get("token");
       if (!userFromToken(token)) throw new Error("not signed in");
     } catch (e) {
       ws.close(4001, "Unauthorized");

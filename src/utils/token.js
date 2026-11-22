@@ -20,4 +20,36 @@ function userFromToken(token) {
   return Object.assign({}, payload, { role: account.role, department: account.department || null, terminalId: account.terminalId || null });
 }
 
-module.exports = { signToken, userFromToken };
+const COOKIE_NAME = 'ct_session';
+const MAX_AGE_S = 12 * 60 * 60; // same 12 hours as the token
+
+// Reads one cookie from the Cookie header (no extra package needed).
+function readCookie(header, name) {
+  if (!header) return null;
+  for (const part of String(header).split(';')) {
+    const i = part.indexOf('=');
+    if (i > 0 && part.slice(0, i).trim() === name) {
+      try { return decodeURIComponent(part.slice(i + 1).trim()); } catch (e) { return null; }
+    }
+  }
+  return null;
+}
+
+// The signed-in token of a request: the cookie first, the old Authorization header as a fallback.
+function tokenFromRequest(req) {
+  const fromCookie = readCookie(req.headers.cookie, COOKIE_NAME);
+  if (fromCookie) return fromCookie;
+  const h = req.headers.authorization || '';
+  return h.startsWith('Bearer ') ? h.slice(7) : null;
+}
+
+const isHttps = req => !!req.secure || req.headers['x-forwarded-proto'] === 'https';
+
+function setSessionCookie(req, res, token) {
+  res.cookie(COOKIE_NAME, token, { httpOnly: true, secure: isHttps(req), sameSite: 'lax', path: '/', maxAge: MAX_AGE_S * 1000 });
+}
+function clearSessionCookie(req, res) {
+  res.clearCookie(COOKIE_NAME, { httpOnly: true, secure: isHttps(req), sameSite: 'lax', path: '/' });
+}
+
+module.exports = { signToken, userFromToken, tokenFromRequest, setSessionCookie, clearSessionCookie, readCookie };

@@ -1,12 +1,7 @@
-// Reads the Bearer token (originally server.js lines 73-84).
-// authOptional returns the signed-in person (checked against their current account, see utils/token.js) or null;
-// authRequired answers 401 if there is none.
-
-const { userFromToken } = require('../utils/token');
+const { userFromToken, tokenFromRequest } = require('../utils/token');
 
 function authOptional(req) {
-  const header = req.headers.authorization || '';
-  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  const token = tokenFromRequest(req);
   if (!token) return null;
   return userFromToken(token);
 }

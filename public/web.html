@@ -674,8 +674,23 @@ let state = { role:null, person:null, userId:null, department:null, terminalId:n
 const API_BASE_KEY = 'contracker_api_base';
 function getApiBase(){ try{ return localStorage.getItem(API_BASE_KEY) || (location.protocol.indexOf('http')===0 ? location.origin : ''); }catch(e){ return ''; } }
 function setApiBase(url){ try{ localStorage.setItem(API_BASE_KEY, String(url||'').trim().replace(/\/+$/,'')); }catch(e){} }
-function getAuthToken(){ try{ return localStorage.getItem('contracker_token') || ''; }catch(e){ return ''; } }
-function setAuthToken(t){ try{ if(t) localStorage.setItem('contracker_token', t); else localStorage.removeItem('contracker_token'); }catch(e){} }
+/* The real sign-in token now lives only in an HttpOnly cookie that the server sets (page scripts cannot read it).
+   Here we keep just a "signed in" marker: the token's header and payload with a dummy signature. It is useless on its own. */
+function getAuthToken(){
+  try{
+    const v = localStorage.getItem('contracker_token') || '';
+    const p = v.split('.');
+    if(p.length===3 && p[2] && p[2]!=='x'){ const m = p[0]+'.'+p[1]+'.x'; localStorage.setItem('contracker_token', m); return m; }   // scrub an old full token
+    return v;
+  }catch(e){ return ''; }
+}
+function setAuthToken(t){
+  try{
+    if(!t){ localStorage.removeItem('contracker_token'); return; }
+    const p = String(t).split('.');
+    localStorage.setItem('contracker_token', p.length===3 ? p[0]+'.'+p[1]+'.x' : '');
+  }catch(e){}
+}
 
 async function apiFetch(path, opts){
   const method = ((opts && opts.method) || 'GET').toUpperCase();
@@ -688,13 +703,11 @@ async function apiFetchInner(path, opts){
   if(!base) { const e = new Error('No server configured yet.'); e.code='NO_API_BASE'; throw e; }
   opts = opts || {};
   const headers = Object.assign({'Content-Type':'application/json'}, opts.headers||{});
-  const token = getAuthToken();
-  if(token) headers['Authorization'] = 'Bearer ' + token;
   let res;
   const ctl = new AbortController();
   const timer = setTimeout(()=>ctl.abort(), window.API_TIMEOUT_MS || 120000);   // a sleeping server must not leave the page waiting forever
   try{
-    res = await fetch(base + path, Object.assign({}, opts, {headers, signal: ctl.signal}));
+    res = await fetch(base + path, Object.assign({}, opts, {headers, signal: ctl.signal, credentials:'same-origin'}));
   }catch(netErr){
     clearTimeout(timer);
     const e = new Error(netErr && netErr.name==='AbortError'
@@ -783,7 +796,7 @@ function connectLiveSocket(){
     if(liveSocket){ try{ liveSocket.close(); }catch(e){} liveSocket=null; }
     const base = getApiBase(); const token = getAuthToken();
     if(!base || !token) return;
-    const wsUrl = base.replace(/^http/,'ws') + '/ws?token=' + encodeURIComponent(token);
+    const wsUrl = base.replace(/^http/,'ws') + '/ws';   // the cookie goes along with the connection by itself
     const sock = new WebSocket(wsUrl);
     sock.onmessage = function(ev){
       try{ const msg = JSON.parse(ev.data); if(msg && msg.type==='changed') refreshFromStorage(); }catch(e){}
@@ -1416,6 +1429,7 @@ function logout(){
   state._signingOut = true;
   if(typeof closeMoreSheet==='function') closeMoreSheet();   // close the menu (mobile page only)
   stopLiveSync();
+  try{ const b = getApiBase(); if(b) fetch(b+'/api/auth/logout', {method:'POST', credentials:'same-origin', keepalive:true}); }catch(e){}   // the server clears the cookie
   setAuthToken('');                              // the session ends right away
   showBusy('Signing you out…');
   setTimeout(()=>{
@@ -3573,7 +3587,7 @@ async function uploadFileToServerInner(file){
   if(!base){ throw new Error('No server configured yet.'); }
   let res;
   try{
-    res = await fetch(base+'/api/files?name='+encodeURIComponent(file.name), {method:'POST', headers:{'Content-Type':'application/octet-stream','Authorization':'Bearer '+getAuthToken()}, body:file});
+    res = await fetch(base+'/api/files?name='+encodeURIComponent(file.name), {method:'POST', headers:{'Content-Type':'application/octet-stream'}, credentials:'same-origin', body:file});
   }catch(e){ const err = new Error('Could not reach the server, so the file was not uploaded. Check your connection and try again.'); err.code='NETWORK'; throw err; }
   let body = null; try{ body = await res.json(); }catch(e){}
   if(res.status===401){ setAuthToken(''); }
@@ -3587,7 +3601,7 @@ async function fetchStoredFile(fileId){
 async function fetchStoredFileInner(fileId){
   const base = getApiBase();
   let res;
-  try{ res = await fetch(base+'/api/files/'+encodeURIComponent(fileId), {headers:{'Authorization':'Bearer '+getAuthToken()}}); }
+  try{ res = await fetch(base+'/api/files/'+encodeURIComponent(fileId), {credentials:'same-origin'}); }
   catch(e){ throw new Error('Could not reach the server, so the file could not be opened. Check your connection and try again.'); }
   if(!res.ok){
     let body = null; try{ body = await res.json(); }catch(e){}

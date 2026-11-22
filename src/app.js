@@ -32,9 +32,22 @@ app.use(helmet({
     })
   }
 }));
-app.use(cors({ origin: true })); // the frontend is a static file that can be opened from anywhere; restrict this later if you host it at a fixed domain
-app.use(express.json({ limit: '25mb' })); // user ID photos / profile pictures are embedded as base64 data URLs
+// Which other websites may talk to this server. The app and the API are on the same address, so this normally stays
+// empty; add a comma-separated list on Render (ALLOWED_ORIGINS) only if you ever host a page somewhere else.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '').split(',').map(s => s.trim().replace(/\/+$/, '')).filter(Boolean);
+app.use(cors({ origin: (origin, cb) => cb(null, !origin || allowedOrigins.includes(origin)), credentials: true }));
 
+// Cookies are sent automatically, so a request that changes data must come from this site (or an allowed one).
+// Browsers always say where a POST/PUT/DELETE came from; tools like curl send nothing and are not affected.
+app.use('/api', (req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  const origin = req.headers.origin;
+  if (!origin) return next();
+  let host = '';
+  try { host = new URL(origin).host; } catch (e) { return res.status(403).json({ error: 'Request blocked.' }); }
+  if (host === req.headers.host || allowedOrigins.includes(origin)) return next();
+  return res.status(403).json({ error: 'Request blocked.' });
+});
 app.use(pagesRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/storage', storageRoutes);

@@ -2,7 +2,7 @@
 // original app.post(...) lines 876, 949, 967, 987 and 1001. app.js mounts this router at /api/auth.
 
 const express = require('express');
-const { authRequired } = require('../middleware/auth');
+const { authRequired, authOptional } = require('../middleware/auth');
 const auth = require('../controllers/auth.controller');
 const { loginPerAccount, loginPerAddress, registerLimiter, sendCodeLimiter, verifyCodeLimiter } = require('../middleware/rateLimit');
 
@@ -14,8 +14,7 @@ const { isSctl, isTerminalAdmin } = require('../policies/role.policy');
 // Registering with no profile (credentials only) is for an Admin creating a staff account. Public sign-up always sends a profile.
 function credentialsOnlyNeedsAdmin(req, res, next) {
   if (req.body && req.body.profile) return next();
-  const h = req.headers.authorization || '';
-  const user = h.startsWith('Bearer ') ? userFromToken(h.slice(7)) : null;
+const user = authOptional(req);
   if (!user) return res.status(401).json({ error: 'Sign in first.' });
   if (!isSctl(user) && !isTerminalAdmin(user)) return res.status(403).json({ error: 'Only an Admin can create accounts.' });
   next();
@@ -32,5 +31,6 @@ router.post('/change-email', authRequired, auth.changeEmail);
 router.post('/create-client-account', authRequired, auth.createClientAccount);
 router.post('/reset-seed-credentials', authRequired, auth.resetSeedCredentials);
 router.post('/restore-demo-accounts', authRequired, auth.restoreDemoAccounts);
+router.post('/logout', auth.logout);
 
 module.exports = router;
