@@ -424,6 +424,10 @@ select:focus, input:focus, textarea:focus{outline:none;border-color:var(--ink);b
 .bar-fill{background:linear-gradient(90deg,var(--y),#FFB300);}
 .msg-bubble{border-radius:16px 16px 16px 4px;}
 .msg-bubble.mine{background:var(--y);color:#111;border-radius:16px 16px 4px 16px;}
+.msg-bubble{color:#1b1b1b;}                                   /* received messages sit on a light bubble: use dark text, not the page's light text */
+.msg-bubble .msg-meta{color:#6b6556;}
+.msg-bubble.mine .msg-meta{color:rgba(17,17,17,.62);}
+.msg-bubble a, .msg-bubble .btn.secondary{color:#1b1b1b;}
 .thread-item.active{background:var(--yellow-soft);}
 .avatar{background:var(--y);color:#111;font-family:'Sora',sans-serif;}
 .dept-chip{background:var(--yellow-soft);color:#7a5a00;border-radius:999px;}
