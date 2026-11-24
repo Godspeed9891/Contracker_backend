@@ -7,7 +7,8 @@ const FIELD_LABELS = {
   size: 'container size', item: 'cargo description', destination: 'destination',
   alerts: 'alerts', steppedDown: 'stepped-down status', deliveryLocation: 'delivery location',
   returnDueDate: 'return-by date', leftTerminalDate: 'date left the terminal', returnedDate: 'date returned to the wharf',
-  owner: 'importer', agent: 'clearing agent'
+  owner: 'importer', agent: 'clearing agent',
+  deleteRequest: 'deletion request', owner: 'importer', agent: 'clearing agent',
 };
 const labelOf = k => FIELD_LABELS[k] || k;
 
@@ -54,6 +55,7 @@ const FIELD_CAPS = {
   transferLetterNumber: 'transferNo', invoiceNumber: 'invoiceNo',
   deliveryLocation: 'deliveryLoc', invoices: 'finance', archived: 'archive',
   returnDueDate: 'returnDates', leftTerminalDate: 'returnDates', returnedDate: 'returnDates',
+  deleteRequest: 'archiveView', owner: 'fen', agent: 'fen',
 };
 
 module.exports = { FIELD_LABELS, labelOf, RESTRICTED_CONTAINER_FIELDS, CAP_DEPTS, FIELD_CAPS };

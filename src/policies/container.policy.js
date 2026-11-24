@@ -93,11 +93,11 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
   if (!Array.isArray(newArr)) return 'Malformed container list.';
   if (!authUser) return 'Sign in required.';
   {
-    // Nobody — not even the top role — may permanently delete a job that has work recorded on it.
+    // Only an archived job can be permanently deleted. Who may delete it is checked further down.
     const keepIds = new Set(newArr.map(c => c.id));
     for (const c of oldArr) {
-      if (!keepIds.has(c.id) && !isUntouchedJob(c)) {
-        return 'Job ' + c.containerNumber + ' has work recorded on it, so it cannot be deleted. Archive it instead.';
+      if (!keepIds.has(c.id) && !c.archived) {
+        return 'Job ' + c.containerNumber + ' is still active. Archive it first; only archived jobs can be deleted.';
       }
     }
   }
@@ -174,6 +174,18 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
             if ((k === 'returnDueDate' || k === 'leftTerminalDate' || k === 'returnedDate') && c[k] !== null && c[k] !== undefined && c[k] !== '') {
         const d = String(c[k]);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || isNaN(new Date(d + 'T00:00:00Z'))) return 'The ' + labelOf(k) + ' must be a valid date.';
+      }
+            if (k === 'deleteRequest') {
+        const r = c[k];
+        if (r) {
+          if (!c.archived) return 'Only an archived job can have a deletion request.';
+          if (typeof r !== 'object' || Array.isArray(r) || !profile || r.by !== profile.name ||
+              (r.reason !== undefined && r.reason !== null && (typeof r.reason !== 'string' || r.reason.length > 300))) {
+            return 'Invalid deletion request.';
+          }
+        } else if (prev.deleteRequest && c.archived && dept !== 'Admin' && (!profile || prev.deleteRequest.by !== profile.name)) {
+          return 'Only the terminal Admin or the person who asked can cancel a deletion request.';
+        }
       }
       const cap = FIELD_CAPS[k];
       if (cap && !hasCap(authUser, profile, cap)) {

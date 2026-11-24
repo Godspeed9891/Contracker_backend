@@ -1495,8 +1495,7 @@ function openProfile(uid){
       ${!editingOther?`<button class="btn small danger" onclick="logout()">Log out of this session</button>`:''}
       ${canEditAll && editingOther ? `
         <div class="section-title">Admin tools</div>
-        ${u.role==='admin' && u.terminalId ? `<button class="btn small secondary" onclick="openStaffPermissions('${u.id}')">Permissions</button>
-            <button class="btn small secondary" onclick="adminResetPassword('${u.id}')">Reset password</button> ` : ''}
+        ${u.role==='admin' && u.terminalId ? `<button class="btn small secondary" onclick="openStaffPermissions('${u.id}')">Permissions</button> ` : ''}
         <button class="btn small secondary" onclick="adminResetPassword('${u.id}')">Reset password</button>
         <button class="btn small secondary" onclick="adminResetDevice('${u.id}')">Reset device / clear session</button>` : ''}
     </div>`;
@@ -2379,8 +2378,7 @@ function openAccountDetails(uid){
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="btn small" onclick="openProfile('${u.id}')">Edit profile</button>
         <button class="btn small secondary" onclick="adminResetPassword('${u.id}')">Reset password</button>
-        ${u.role==='admin' && u.terminalId ? `<button class="btn small secondary" onclick="openStaffPermissions('${u.id}')">Permissions</button>
-            <button class="btn small secondary" onclick="adminResetPassword('${u.id}')">Reset password</button>` : ''}
+        ${u.role==='admin' && u.terminalId ? `<button class="btn small secondary" onclick="openStaffPermissions('${u.id}')">Permissions</button>` : ''}
       </div>
     </div>`);
 }
@@ -3337,10 +3335,9 @@ function canDeleteJob(c){ return (isTerminalAdmin() && c.terminalId===state.term
 function jobEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function jobActionButtons(c){
   let h = '';
-  if(c.archived){ if(canArchiveJob(c)) h += `<button class="btn small secondary" onclick="restoreJob('${c.id}')">↩ Restore job</button>`; return h; }
+  if(c.archived){ if(canArchiveJob(c)) h += `<button class="btn small secondary" onclick="restoreJob('${c.id}')">↩ Restore job</button>`; h += deleteButtonsHTML(c); return h; }
   if(canEditJob(c)) h += `<button class="btn small secondary" onclick="openEditJob('${c.id}')">✎ Edit job</button>`;
   if(canArchiveJob(c)) h += `<button class="btn small secondary" onclick="confirmArchiveJob('${c.id}')">🗄 Archive job</button>`;
-  if(canDeleteJob(c) && isUntouchedJob(c)) h += `<button class="btn small danger" onclick="confirmDeleteJob('${c.id}')">🗑 Delete job</button>`;
   return h;
 }
 function showModalHTML(html){
@@ -3428,42 +3425,91 @@ async function confirmEditJob(id){
   toast('Job information updated.');
   openContainer(id);
 }
+/* Deleting happens only from the Archive. The terminal's Admin deletes directly; any other staff member who can see the
+   Archive asks for it, and the Admin approves (which deletes) or declines. */
+function canRequestDelete(c){ return isStaff() && c.terminalId===state.terminalId && can('archiveView') && !canDeleteJob(c); }
+function deleteButtonsHTML(c){
+  const r = c.deleteRequest;
+  if(canDeleteJob(c)){
+    if(r) return `<button class="btn small danger" onclick="confirmDeleteJob('${c.id}')">🗑 Approve &amp; delete</button><button class="btn small secondary" onclick="declineDeleteRequest('${c.id}')">Decline request</button>`;
+    return `<button class="btn small danger" onclick="confirmDeleteJob('${c.id}')">🗑 Delete job</button>`;
+  }
+  if(canRequestDelete(c)){
+    if(r) return r.by===state.person ? `<button class="btn small secondary" onclick="declineDeleteRequest('${c.id}')">Withdraw deletion request</button>` : '';
+    return `<button class="btn small danger" onclick="openRequestDelete('${c.id}')">🗑 Request deletion</button>`;
+  }
+  return '';
+}
+function archivedJob(id){ return (state.archived||[]).find(x=>x.id===id); }
 function confirmDeleteJob(id){
-  const c = byId(id); if(!c) return;
-  if(!canDeleteJob(c)){ toast('You do not have permission to delete this job.'); return; }
-  if(!isUntouchedJob(c)){ toast('This job has work recorded on it, so it cannot be deleted. Use Archive job instead.'); return; }
+  const c = archivedJob(id); if(!c){ toast('Only archived jobs can be deleted. Archive the job first.'); return; }
+  if(!canDeleteJob(c)){ toast("Only your terminal's Admin can delete a job. Use Request deletion instead."); return; }
   if(checkMasterHold()) return;
-  state.openContainerId = id;
+  const r = c.deleteRequest;
   showModalHTML(`
     <div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">Delete job</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
-      <button class="btn ghost" onclick="openContainer('${id}')">✕</button></div>
+      <button class="btn ghost" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
-      <p style="font-size:14px;margin-bottom:8px;"><b>Delete this job permanently?</b></p>
+      <p style="font-size:14px;margin-bottom:8px;"><b>Delete this archived job permanently?</b></p>
       <p class="tag-line" style="margin-bottom:6px;">${jobEsc(c.billOfLading)} · ${jobEsc(c.size)} · ${jobEsc(c.item)}</p>
-      <p style="font-size:13px;margin-bottom:14px;">No work has been recorded on this job yet, so only the registration itself is lost. This cannot be undone. If you only mistyped something, use <b>Edit job</b>; if you may want it back later, use <b>Archive job</b> instead.</p>
-      <div style="display:flex;gap:8px;"><button class="btn danger" onclick="deleteJob('${id}')">Yes, delete this job</button>
-        <button class="btn secondary" onclick="openContainer('${id}')">No, keep it</button></div>
+      ${r ? `<p style="font-size:13px;margin-bottom:8px;">Deletion requested by <b>${jobEsc(r.by)}</b>${r.reason?': '+jobEsc(r.reason):''}.</p>` : ''}
+      <p style="font-size:13px;margin-bottom:10px;">Everything recorded on it (history, documents, charges, alerts) is removed for good. This cannot be undone. If you may want it back, use <b>Restore</b> instead.</p>
+      <div class="field"><label>Type the container number to confirm</label><input id="dj-confirm" autocomplete="off" placeholder="${jobEsc(c.containerNumber)}"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;"><button class="btn danger" onclick="deleteJob('${id}')">Yes, delete permanently</button>
+        <button class="btn secondary" onclick="closeModal()">No, keep it</button></div>
     </div>`);
 }
 async function deleteJob(id){
-  const idx = state.containers.findIndex(x=>x.id===id);
-  if(idx<0){ toast('This job was already removed.'); closeModal(); renderApp(); return; }
-  const c = state.containers[idx];
-  if(!canDeleteJob(c)){ toast('You do not have permission to delete this job.'); return; }
-  if(!isUntouchedJob(c)){ toast('This job has work recorded on it, so it cannot be deleted. Use Archive job instead.'); return; }
+  const arch = state.archived||[];
+  const c = arch.find(x=>x.id===id);
+  if(!c){ toast('This job was already removed.'); closeModal(); renderApp(); return; }
+  if(!canDeleteJob(c)){ toast("Only your terminal's Admin can delete a job."); return; }
+  const typed = ((document.getElementById('dj-confirm')||{}).value||'').trim().toUpperCase();
+  if(typed !== String(c.containerNumber).trim().toUpperCase()){ toast('Type the container number exactly to confirm.'); return; }
   if(checkMasterHold()) return;
-  const backup = state.containers.slice();
-  state.containers = backup.filter(x=>x.id!==id);
-  computeDuplicateFlags();
+  const backupArch = arch.slice();
+  state.archived = arch.filter(x=>x.id!==id);
   const ok = await saveContainers(state.containers, {deleted:[id]});
-  if(!ok){
-    state.containers = backup;
-    computeDuplicateFlags();
-    closeModal(); renderApp();
-    return;
-  }
-  await pushLog(`Job deleted: ${c.containerNumber} (${c.billOfLading}) — by ${state.person}.`, 'Admin');
+  if(!ok){ state.archived = backupArch; closeModal(); renderApp(); return; }
+  await pushLog(`Job deleted from the archive: ${c.containerNumber} (${c.billOfLading}) — by ${state.person}${c.deleteRequest?' (requested by '+c.deleteRequest.by+')':''}.`, 'Admin');
   toast(`Job ${c.containerNumber} deleted.`);
+  closeModal(); renderApp();
+}
+function openRequestDelete(id){
+  const c = archivedJob(id); if(!c) return;
+  if(!canRequestDelete(c)){ toast('You cannot request deletion of this job.'); return; }
+  showModalHTML(`
+    <div class="modal-head"><div><div class="tag-line">Request deletion</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
+      <button class="btn ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;margin-bottom:10px;">Your terminal's Admin has to approve this before the job is deleted. Until then nothing changes.</p>
+      <div class="field"><label>Reason</label><input id="rd-reason" maxlength="300" placeholder="e.g. Registered twice by mistake"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;"><button class="btn danger" onclick="requestDelete('${id}')">Send request</button>
+        <button class="btn secondary" onclick="closeModal()">Cancel</button></div>
+    </div>`);
+}
+async function requestDelete(id){
+  const c = archivedJob(id); if(!c) return;
+  if(!canRequestDelete(c)){ toast('You cannot request deletion of this job.'); return; }
+  const reason = (((document.getElementById('rd-reason')||{}).value)||'').trim().slice(0,300);
+  if(!reason){ toast('Please give a reason.'); return; }
+  c.deleteRequest = { by: state.person, date: new Date().toISOString(), reason };
+  const ok = await saveContainers(state.containers);
+  if(!ok){ c.deleteRequest = null; closeModal(); renderApp(); return; }
+  await pushLog(`Deletion requested for archived job ${c.containerNumber} (${c.billOfLading}) — by ${state.person}. Reason: ${reason}`, 'Admin');
+  toast('Request sent to your terminal\'s Admin.');
+  closeModal(); renderApp();
+}
+async function declineDeleteRequest(id){
+  const c = archivedJob(id); if(!c || !c.deleteRequest) return;
+  const mine = c.deleteRequest.by===state.person;
+  if(!canDeleteJob(c) && !mine){ toast('Only the Admin or the person who asked can cancel this request.'); return; }
+  const old = c.deleteRequest;
+  c.deleteRequest = null;
+  const ok = await saveContainers(state.containers);
+  if(!ok){ c.deleteRequest = old; renderApp(); return; }
+  await pushLog(`Deletion request for archived job ${c.containerNumber} ${mine && !canDeleteJob(c) ? 'withdrawn' : 'declined'} — by ${state.person}.`, 'Admin');
+  toast(mine && !canDeleteJob(c) ? 'Request withdrawn.' : 'Request declined.');
   closeModal(); renderApp();
 }
 
@@ -3476,7 +3522,7 @@ function isUntouchedJob(c){
   const f = Object.assign({}, c.financial||{}); delete f.processingCharge; delete f.dutyStatus;
   return Object.values(f).every(blank);
 }
-function jobStatusLine(c){ return (c.archived? 'Archived by '+jobEsc(c.archived.by)+' on '+fmtDate(c.archived.date)+(c.archived.reason?' — '+jobEsc(c.archived.reason):'') : ''); }
+function jobStatusLine(c){ return (c.archived? 'Archived by '+jobEsc(c.archived.by)+' on '+fmtDate(c.archived.date)+(c.archived.reason?' — '+jobEsc(c.archived.reason):'') + (c.deleteRequest?' · 🗑 Deletion requested by '+jobEsc(c.deleteRequest.by)+(c.deleteRequest.reason?' — '+jobEsc(c.deleteRequest.reason):''):'') : ''); }
 function confirmArchiveJob(id){
   const c = byId(id); if(!c) return;
   if(!canArchiveJob(c)){ toast('You do not have permission to archive this job.'); return; }
@@ -3523,13 +3569,13 @@ async function restoreJob(id){
   if(!canArchiveJob(c)){ toast('You do not have permission to restore this job.'); return; }
   if(checkMasterHold()) return;
   if(state.containers.some(x=>x.containerNumber===c.containerNumber && x.terminalId===c.terminalId)){ toast('Another active job already uses container number '+c.containerNumber+'. Edit that one first.'); return; }
-  const backup = state.containers.slice(), backupArch = arch.slice(), old = c.archived;
-  c.archived = null;
+  const backup = state.containers.slice(), backupArch = arch.slice(), old = c.archived, oldReq = c.deleteRequest;
+  c.archived = null; c.deleteRequest = null;
   state.archived = arch.filter(x=>x.id!==id);
   state.containers = backup.concat([c]);
   computeDuplicateFlags();
   const ok = await saveContainers(state.containers);
-  if(!ok){ c.archived = old; state.containers = backup; state.archived = backupArch; computeDuplicateFlags(); renderApp(); return; }
+  if(!ok){ c.archived = old; c.deleteRequest = oldReq; state.containers = backup; state.archived = backupArch; computeDuplicateFlags(); renderApp(); return; }
   await pushLog(`Job restored from archive: ${c.containerNumber} — by ${state.person}.`, 'Admin');
   toast(`Job ${c.containerNumber} restored.`);
   closeModal(); renderApp();
@@ -3549,6 +3595,7 @@ function archRowHTML(c){
       <button class="btn small secondary" onclick="openContainer('${c.id}')">Open</button>
       ${(!(c.steppedDown&&c.steppedDown.status) && (isStaff()&&c.terminalId===state.terminalId&&can('stepDown')))?`<button class="btn small danger" onclick="archiveStepDown('${c.id}')">Step down</button>`:''}
       ${canArchiveJob(c)?`<button class="btn small" onclick="restoreJob('${c.id}')">Restore</button>`:''}
+      ${deleteButtonsHTML(c)}
     </div></div>`;
 }
 function archiveStepDown(id){ openContainer(id); showStepDownForm(id); }
@@ -3565,6 +3612,7 @@ function archiveHTML(){
       <div class="metric"><div class="num">${list.filter(c=>c.steppedDown&&c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
       <div class="metric"><div class="num">${list.filter(c=>c.stageIdx>=13).length}</div><div class="lbl">Delivered / returned</div></div>
       <div class="metric"><div class="num">${list.filter(c=>c.stageIdx<13).length}</div><div class="lbl">Still in progress when archived</div></div>
+      ${isSCTL()?'':`<div class="metric"><div class="num">${list.filter(c=>c.deleteRequest).length}</div><div class="lbl">Deletion requests</div></div>`}
     </div>
     <div class="panel"><div class="panel-head"><h3>Archived jobs</h3>
       <div class="toolbar"><input type="text" id="arch-search" placeholder="Search container, BOL, cargo…" oninput="filterArchive()"></div></div>
