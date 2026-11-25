@@ -4,8 +4,8 @@ const { isSctl } = require('./role.policy');
 const { FEN_BOL_DEPTS, DEFAULT_DEPT_STAGE_ACCESS, DERIVED_CONTAINER_KEYS } = require('../constants/stages');
 const { labelOf, CAP_DEPTS, FIELD_CAPS } = require('../constants/containerFields');
 
-// A job counts as "untouched" while nothing but its registration exists. Only
-// such a job may be permanently deleted; anything with work on it can only be archived.
+// A job counts as "untouched" while nothing but its registration exists. (No longer used for deleting:
+// any archived job may now be deleted by its terminal's Admin; kept because other code may still use it.)
 function isUntouchedJob(c) {
   if ((c.stageIdx || 0) !== 0) return false;
   for (const k of ['documents', 'alerts', 'invoices', 'transportHistory', 'progressNotes', 'transporter', 'transferLetterNumber',
@@ -25,6 +25,54 @@ function changedContainerKeys(prev, next) {
     if (!looseEqual(prev[k], next[k], k)) out.push(k);
   }
   return out;
+}
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const validDate = s => DATE_RE.test(String(s)) && !isNaN(new Date(String(s) + 'T00:00:00Z'));
+const NOTE_KEYS = new Set(['id', 'text', 'by', 'date', 'staffOnly', 'replyTo', 'edited', 'editedAt']);
+const noteText = t => typeof t === 'string' && t.trim().length > 0 && t.length <= 2000;
+
+// Who sees the money on a job (the full breakdown, expenses, profit and the invoices): an Admin or Accountant, i.e. anyone
+// with the finance permission. Everybody else only ever gets the processing charge written at first entry (see views/container.view.js).
+function canSeeFinanceData(user, profile) {
+  return !!user && user.role === 'admin' && hasCap(user, profile, 'finance');
+}
+
+// Comments on a job. Whoever may write one adds it under their own name, may reply to a comment they can see, and may edit
+// (the text only) or delete their own comments, never anyone else's.
+function checkNoteChanges(prev, next, user, profile) {
+  prev = Array.isArray(prev) ? prev : [];
+  next = Array.isArray(next) ? next : [];
+  if (!profile) return 'Your profile was not found.';
+  if (next.length > 500) return 'Too many comments on one job.';
+  const prevById = new Map(prev.filter(n => n && n.id).map(n => [n.id, n]));
+  const nextById = new Map();
+  for (const n of next) {
+    if (!n || typeof n !== 'object' || typeof n.id !== 'string' || !n.id || n.id.length > 60 || nextById.has(n.id)) return 'Invalid comment.';
+    nextById.set(n.id, n);
+  }
+  for (const p of prev) {
+    if (p && !nextById.has(p.id) && p.by !== profile.name) return 'You can only delete your own comments.';
+  }
+  for (const n of next) {
+    const p = prevById.get(n.id);
+    if (p) {
+      if (deepEqual(p, n)) continue;
+      if (p.by !== profile.name) return 'You can only edit your own comments.';
+      const strip = o => { const x = Object.assign({}, o); delete x.text; delete x.edited; delete x.editedAt; return x; };
+      if (!deepEqual(strip(p), strip(n))) return 'Only the text of a comment can be edited.';
+      if (!noteText(n.text)) return 'A comment cannot be empty or longer than 2000 characters.';
+      continue;
+    }
+    if (Object.keys(n).some(k => !NOTE_KEYS.has(k))) return 'Invalid comment.';
+    if (n.edited || n.editedAt) return 'Invalid comment.';
+    if (n.by !== profile.name) return 'A comment must be written under your own name.';
+    if (!noteText(n.text)) return 'A comment cannot be empty or longer than 2000 characters.';
+    if (n.staffOnly && user.role !== 'admin') return 'Only terminal staff can write staff-only comments.';
+    if (typeof n.date !== 'string' || isNaN(new Date(n.date))) return 'Invalid comment.';
+    if (n.replyTo && !prevById.has(n.replyTo) && !nextById.has(n.replyTo)) return 'You can only reply to a comment you can see.';
+  }
+  return null;
 }
 
 function jobVisibleTo(user, profile, c) {
@@ -66,8 +114,25 @@ function checkClientJobWrite(oldArr, newArr, profile) {
     for (const k of changedContainerKeys(prev, c)) {
       if (k === 'deliveryLocation') continue;
       if (k === 'documents') continue; // checked in full by checkDocumentChanges
+      if (k === 'financial') continue; // they only see a summary; the server keeps the stored breakdown
+      if (k === 'progressNotes') { const err = checkNoteChanges(prev.progressNotes, c.progressNotes, { role: 'importer' }, profile); if (err) return err; continue; }
       if (k === 'invoices') { const err = checkInvoiceAppend(prev.invoices || [], c.invoices || [], profile); if (err) return err; continue; }
-      return 'Importers and agents can only update the delivery location, upload invoices, and add a Bill of Lading, PAAR or Other document (not the ' + labelOf(k) + ' on ' + c.containerNumber + ').';
+      return 'Importers and agents can only update the delivery location, upload invoices, write comments, and add a Bill of Lading, PAAR or Other document (not the ' + labelOf(k) + ' on ' + c.containerNumber + ').';
+    }
+  }
+  return null;
+}
+
+// Customs may read every job and write comments on them, nothing else.
+function checkCustomsJobWrite(oldArr, newArr, profile) {
+  const oldById = new Map(oldArr.map(c => [c.id, c]));
+  if (newArr.length !== oldArr.length || newArr.some(c => !oldById.has(c.id))) return 'Customs cannot add or remove jobs.';
+  for (const c of newArr) {
+    const prev = oldById.get(c.id);
+    for (const k of changedContainerKeys(prev, c)) {
+      if (k === 'financial') continue;
+      if (k === 'progressNotes') { const err = checkNoteChanges(prev.progressNotes, c.progressNotes, { role: 'customs' }, profile); if (err) return err; continue; }
+      return 'Customs can only write comments on a job (not change the ' + labelOf(k) + ' on ' + c.containerNumber + ').';
     }
   }
   return null;
@@ -87,7 +152,7 @@ function hasCap(authUser, profile, cap) {
 // entirely (including deleting). Every other staff account is scoped to its
 // OWN terminal — a job at another terminal can't be touched at all — and the
 // department rules are re-checked field by field. A terminal's Admin
-// department may also delete a job at its own terminal.
+// department may also delete an ARCHIVED job at its own terminal.
 async function checkContainersWrite(oldArr, newArr, authUser, profile) {
   oldArr = Array.isArray(oldArr) ? oldArr : [];
   if (!Array.isArray(newArr)) return 'Malformed container list.';
@@ -106,12 +171,13 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
     const oldIds = new Set(oldArr.map(c => c.id));
     const sameSet = newArr.length === oldArr.length && newArr.every(c => oldIds.has(c.id));
     const oldById = new Map(oldArr.map(c => [c.id, c]));
-    if (!sameSet || newArr.some(c => changedContainerKeys(oldById.get(c.id), c).length)) {
+    if (!sameSet || newArr.some(c => changedContainerKeys(oldById.get(c.id), c).filter(k => k !== 'financial').length)) {
       return 'SCTL can view jobs but cannot change them. Only the bonded terminal\'s own staff can.';
     }
     return null;
   }
   if (authUser.role === 'importer' || authUser.role === 'agent') return checkClientJobWrite(oldArr, newArr, profile);
+  if (authUser.role === 'customs') return checkCustomsJobWrite(oldArr, newArr, profile);
   if (authUser.role !== 'admin') return 'Only bonded terminal staff accounts can change job records.';
 
   const dept = authUser.department;
@@ -123,12 +189,13 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
     if (!oldById.has(c.id)) {
       if (c.terminalId !== myTerminal) return 'You can only register jobs at your own terminal.';
       if (!hasCap(authUser, profile, 'fen')) return 'You are not allowed to register a new job.';
+      if (!validDate(c.eta)) return 'An ETA date is required to register a job.';
     }
   }
   for (const c of oldArr) {
     if (!newById.has(c.id)) {
       if (c.terminalId !== myTerminal) return 'You can only manage jobs at your own terminal.';
-      if (dept !== 'Admin') return "Only your terminal's Admin department can delete a job (" + c.containerNumber + ').';
+      if (dept !== 'Admin') return "Only your terminal's Admin can delete a job (" + c.containerNumber + '). Ask for the deletion instead.';
     }
   }
 
@@ -164,18 +231,18 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
       if (k === 'exitNumber' && c[k] !== null && c[k] !== undefined && c[k] !== '' && !/^X \d{1,12}$/.test(String(c[k]))) {
         return 'The exit number must be the letter X, a space, then the number (for example X 1776).';
       }
-            if (k === 'archived' && c[k]) {
+      if (k === 'archived' && c[k]) {
         const a = c[k];
         if (typeof a !== 'object' || Array.isArray(a) || (profile && a.by !== profile.name) ||
             (a.reason !== undefined && a.reason !== null && (typeof a.reason !== 'string' || a.reason.length > 500))) {
           return 'Invalid archive record.';
         }
       }
-            if ((k === 'returnDueDate' || k === 'leftTerminalDate' || k === 'returnedDate') && c[k] !== null && c[k] !== undefined && c[k] !== '') {
+      if ((k === 'returnDueDate' || k === 'leftTerminalDate' || k === 'returnedDate') && c[k] !== null && c[k] !== undefined && c[k] !== '') {
         const d = String(c[k]);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || isNaN(new Date(d + 'T00:00:00Z'))) return 'The ' + labelOf(k) + ' must be a valid date.';
       }
-            if (k === 'deleteRequest') {
+      if (k === 'deleteRequest') {
         const r = c[k];
         if (r) {
           if (!c.archived) return 'Only an archived job can have a deletion request.';
@@ -187,6 +254,18 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
           return 'Only the terminal Admin or the person who asked can cancel a deletion request.';
         }
       }
+      if (k === 'progressNotes') {
+        const err = checkNoteChanges(prev.progressNotes, c.progressNotes, authUser, profile);
+        if (err) return err;
+        continue;
+      }
+      if (k === 'financial' && !canSeeFinanceData(authUser, profile)) continue; // never shown to them; the server keeps the stored breakdown
+      if (k === 'eta' && c[k] !== null && c[k] !== undefined && c[k] !== '' && !validDate(c[k])) return 'The ETA must be a valid date.';
+      if (k === 'arrivedDate' && c[k]) {
+        if (!validDate(c[k])) return 'The arrival date must be a valid date.';
+        if (String(c[k]) > new Date(Date.now() + 36 * 3600 * 1000).toISOString().slice(0, 10)) return 'The arrival date cannot be in the future.';
+      }
+      if (k === 'arrivedBy' && c[k] && (!profile || c[k] !== profile.name)) return 'The vessel arrival must be recorded under your own name.';
       const cap = FIELD_CAPS[k];
       if (cap && !hasCap(authUser, profile, cap)) {
         return 'You are not allowed to change the ' + labelOf(k) + ' on ' + c.containerNumber + '.';
@@ -197,6 +276,6 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
 }
 
 module.exports = {
-  isUntouchedJob, changedContainerKeys, jobVisibleTo, canSeeStaffNotes, hasCap,
+  isUntouchedJob, changedContainerKeys, jobVisibleTo, canSeeStaffNotes, canSeeFinanceData, hasCap,
   checkInvoiceAppend, CLIENT_DOC_TYPES, checkClientJobWrite, checkContainersWrite
 };

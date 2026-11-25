@@ -25,6 +25,13 @@ function adminDocCorrection(c, p, n, nd) {
   return null;
 }
 
+// Anyone may delete a document they uploaded themselves. The Accountant can delete a wrong document, and so can the terminal Admin.
+function canDeleteDoc(user, profile, d) {
+  if (!profile) return false;
+  if (d.uploadedBy === profile.name) return true;
+  return user.role === 'admin' && (user.department === 'Accountant' || user.department === 'Admin');
+}
+
 // Rules for every change to a job's documents (and the files behind documents and in
 // voices).
 // Returns null if fine, or a plain-language reason.
@@ -35,7 +42,7 @@ async function checkDocumentChanges(oldArr, newArr, user, profile) {
   for (const c of newArr) {
     const prev = oldById.get(c.id);
     if (!prev) continue;
-    const pd = Array.isArray(prev.documents) ? prev.documents : [];
+    let pd = Array.isArray(prev.documents) ? prev.documents : [];
     const nd = Array.isArray(c.documents) ? c.documents : [];
     const label = c.containerNumber;
 
@@ -49,7 +56,17 @@ async function checkDocumentChanges(oldArr, newArr, user, profile) {
     }
 
     if (deepEqual(pd, nd)) continue;
-    if (nd.length < pd.length) return 'Documents cannot be removed from ' + label + '.';
+    if (nd.length < pd.length) {
+      const kept = new Set(nd.map(d => d && d.id).filter(Boolean));
+      const gone = pd.filter(p => !(p && p.id && kept.has(p.id)));
+      for (const p of gone) {
+        if (!p || !p.id) return 'This document cannot be removed from ' + label + '.';
+        if (!canDeleteDoc(user, profile, p)) return 'You can only delete documents you uploaded yourself.';
+      }
+      pd = pd.filter(p => p && p.id && kept.has(p.id));
+      if (nd.length < pd.length) return 'Invalid documents.';
+      if (deepEqual(pd, nd)) continue;
+    }
 
     for (let i = 0; i < pd.length; i++) {
       const p = pd[i], n = nd[i];

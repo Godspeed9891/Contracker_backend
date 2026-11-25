@@ -7,4 +7,7 @@ const DEFAULT_DEPT_STAGE_ACCESS = {
 };
 const DERIVED_CONTAINER_KEYS = new Set(['duplicateFlag']); // computed by the app on load, not real edits
 
+if (!FEN_BOL_DEPTS.includes('Accountant')) FEN_BOL_DEPTS.push('Accountant');
+DEFAULT_DEPT_STAGE_ACCESS.Accountant = DEFAULT_DEPT_STAGE_ACCESS.Documentation;
+
 module.exports = { FEN_BOL_DEPTS, FINANCE_DEPTS, DEFAULT_DEPT_STAGE_ACCESS, DERIVED_CONTAINER_KEYS };

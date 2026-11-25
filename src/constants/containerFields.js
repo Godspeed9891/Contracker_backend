@@ -58,4 +58,8 @@ const FIELD_CAPS = {
   deleteRequest: 'archiveView', owner: 'fen', agent: 'fen',
 };
 
+Object.assign(FIELD_CAPS, { eta:'fen', arrivedDate:'fen', arrivedBy:'fen', financial:'finance', deleteRequest:'archiveView', owner:'fen', agent:'fen' });
+Object.assign(FIELD_LABELS, { eta:'ETA', arrivedDate:'vessel arrival date', arrivedBy:'vessel arrival record', financial:'financial breakdown', deleteRequest:'deletion request', owner:'importer', agent:'clearing agent' });
+for (const k of Object.keys(CAP_DEPTS)) if (CAP_DEPTS[k].includes('Documentation') && !CAP_DEPTS[k].includes('Accountant')) CAP_DEPTS[k] = CAP_DEPTS[k].concat('Accountant');
+
 module.exports = { FIELD_LABELS, labelOf, RESTRICTED_CONTAINER_FIELDS, CAP_DEPTS, FIELD_CAPS };

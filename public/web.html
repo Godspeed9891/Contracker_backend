@@ -210,6 +210,7 @@
   .thread-item{padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;}
   .thread-item:hover{background:#FBF7EA;}
   .thread-item.active{background:var(--gold-soft);}
+  .forgot-link{font-size:13px;font-weight:600;color:var(--gold-deep,#7A5A00);text-decoration:underline;}
   .msg-bubble{background:#F3F0E4;border-radius:8px;padding:9px 12px;margin-bottom:8px;font-size:12.5px;max-width:80%;}
   .msg-bubble.mine{background:var(--gold-soft);margin-left:auto;}
   .msg-meta{font-size:10.5px;color:var(--ink-soft);margin-bottom:3px;}
@@ -523,6 +524,55 @@ select:focus, input:focus, textarea:focus{outline:none;border-color:var(--ink);b
 .sidebar .brand .stamp-mark{width:58px !important;height:58px !important;margin-bottom:8px !important;}
 .app-bar .ab-logo{width:34px;height:34px;flex:none;background:var(--sctl-mark) center/contain no-repeat;margin:0 2px 0 -2px;}
 .auth-brand .sub{padding-left:0 !important;}
+
+.msg-bubble, .msg-bubble div{color:#111 !important;}
+.msg-bubble .msg-meta{color:#5A5648 !important;}
+.msg-flag{display:inline-block;margin-left:6px;background:#FFC400;color:#111;border-radius:999px;font-size:11px;font-weight:700;padding:1px 8px;vertical-align:middle;}
+#note-popup{position:fixed;right:16px;bottom:16px;z-index:99999;max-width:min(340px,calc(100vw - 32px));display:flex;flex-direction:column;gap:8px;}
+#note-popup .np{background:#111;color:#fff;border-left:5px solid #FFC400;border-radius:10px;padding:10px 12px;box-shadow:0 6px 24px rgba(0,0,0,.3);cursor:pointer;font-size:13px;line-height:1.35;}
+#note-popup .np small{display:block;color:#ccc;margin-top:3px;font-size:12px;}
+#note-popup .np b{color:#FFC400;}
+#note-popup .np .x{float:right;margin-left:8px;opacity:.7;}
+@media (max-width:760px){ #note-popup{bottom:calc(84px + env(safe-area-inset-bottom,0px));right:12px;} }
+  #busy-overlay{position:fixed;inset:0;z-index:99999;display:none;align-items:center;justify-content:center;background:rgba(12,12,12,.85);}
+  .busy-box{background:#fff;color:#111;border-radius:12px;padding:24px 30px;text-align:center;font-weight:600;font-size:14px;max-width:80vw;}
+  .idcard-preview{cursor:zoom-in;}
+  #id-lightbox{position:fixed;inset:0;z-index:99998;background:rgba(0,0,0,.9);display:none;align-items:center;justify-content:center;cursor:zoom-out;}
+  #id-lightbox img{max-width:95vw;max-height:92vh;border-radius:6px;background:#fff;}
+  .busy-hint{font-weight:400;font-size:12.5px;color:#555;margin-top:10px;max-width:280px;}
+  .busy-actions{display:none;margin-top:14px;}
+  .busy-spin{width:34px;height:34px;margin:0 auto 12px;border:4px solid #e3d9b0;border-top-color:#B8932A;border-radius:50%;animation:busyspin .8s linear infinite;}
+  @keyframes busyspin{to{transform:rotate(360deg);}}
+  .pw-wrap{position:relative;display:block;}
+  .pw-wrap input{padding-right:62px !important;}
+  .pw-toggle{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:none;border:0;color:var(--ink);font:600 12px inherit;font-family:inherit;cursor:pointer;padding:6px 8px;}
+
+  .metric-link{cursor:pointer;transition:transform .12s,box-shadow .12s;}
+  .metric-link:hover{transform:translateY(-2px);box-shadow:0 4px 14px rgba(0,0,0,.14);}
+  .metric-link:focus-visible{outline:3px solid #FFC400;outline-offset:2px;}
+  .metric-link .lbl:after{content:" \203A";}
+  .job-row.dash-hit{animation:dashhit 1.6s ease-out;}
+  @keyframes dashhit{0%{background:#FFF3C4;}100%{background:transparent;}}
+</style>
+<style id="ui-v3">
+/* Alerts and step-down notices: yellow with black writing, like the rest of the pages */
+.alert-card,.stepdown-card{background:#FFC400 !important;border:2px solid #0D0D0E !important;color:#000 !important;}
+.alert-card h4,.alert-card p,.alert-card div,.alert-card span,.alert-card b,.alert-card strong,.alert-card small,.alert-card .hint,
+.stepdown-card h4,.stepdown-card p,.stepdown-card div,.stepdown-card span,.stepdown-card b,.stepdown-card strong,.stepdown-card small,.stepdown-card .hint{color:#000 !important;}
+.alert-card .btn,.stepdown-card .btn{background:#0D0D0E !important;color:#FFC400 !important;border-color:#0D0D0E !important;}
+/* The stage the container has reached blinks like an indicator light */
+@keyframes ctblink{0%{background:#FFC400;border-color:#FFC400;box-shadow:0 0 0 7px rgba(255,196,0,.45),0 0 18px 4px rgba(255,196,0,.85);}
+  50%{background:#0D0D0E;border-color:#FFC400;box-shadow:0 0 0 0 rgba(255,196,0,0);}100%{background:#FFC400;border-color:#FFC400;box-shadow:0 0 0 7px rgba(255,196,0,.45),0 0 18px 4px rgba(255,196,0,.85);}}
+@keyframes ctblinktext{0%{opacity:1;}50%{opacity:.3;}100%{opacity:1;}}
+.rail-step.current .rail-dot{animation:ctblink 1s step-end infinite !important;}
+.rail-step.current .rail-name,.rail-step.current .rail-code{animation:ctblinktext 1s step-end infinite;}
+@media (prefers-reduced-motion:reduce){.rail-step.current .rail-dot,.rail-step.current .rail-name,.rail-step.current .rail-code{animation:none !important;}}
+.rail-wrap{position:relative;isolation:isolate;z-index:0;}
+.modal-head{position:sticky;top:0;z-index:20;}
+.bol-card h4{color:#C62828 !important;font-weight:800;font-size:14.5px;letter-spacing:.2px;}
+.bol-card{border-left:4px solid #C62828;}
+.alert-card h4{color:#B71C1C !important;font-weight:800;font-size:14.5px;}
+.alert-card{border-left:6px solid #B71C1C !important;}
 </style>
 <style id="ui-v3">
 /* Alerts and step-down notices: yellow with black writing, like the rest of the pages */
@@ -603,28 +653,28 @@ const STAGES = [
 const MOTHERPORT_MAX_IDX = 8; /* stages 0-8: CPC through Transit — the Customs Officer's zone at WACT/OMT */
 const STAGE_DEPT = ['Field Staff','Field Staff','Field Staff','Field Staff','Field Staff','Field Staff',
   'Field Staff','Field Staff','Field Staff','Operations','Operations','Operations','Operations','Transport','Transport'];
-const DEPARTMENTS = ['Admin','Documentation','DTI','Field Staff','Operations','Transport','Accountant'];
-const FEN_BOL_DEPTS = ['Admin','Documentation','DTI'];
+const DEPARTMENTS = ['Admin','Documentation','Accountant','DTI','Field Staff','Operations','Transport','Accountant'];
+const FEN_BOL_DEPTS = ['Admin','Documentation','Accountant','DTI'];
 const FINANCE_DEPTS = ['Admin','Accountant'];
 const ALL_STAGE_IDX = STAGES.map((_,i)=>i);
-const ALL_STAGE_DEPTS = ['Documentation','DTI','Field Staff']; /* may move a job through every stage 1-15 unless the terminal Admin says otherwise */
-const DEFAULT_DEPT_STAGE_ACCESS = {Documentation:ALL_STAGE_IDX, DTI:ALL_STAGE_IDX, 'Field Staff':ALL_STAGE_IDX, Operations:[9,10,11,12], Transport:[13,14], Accountant:[]};
+const ALL_STAGE_DEPTS = ['Documentation','Accountant','DTI','Field Staff']; /* may move a job through every stage 1-15 unless the terminal Admin says otherwise */
+const DEFAULT_DEPT_STAGE_ACCESS = {Documentation:ALL_STAGE_IDX, DTI:ALL_STAGE_IDX, 'Field Staff':ALL_STAGE_IDX, Operations:[9,10,11,12], Transport:[13,14], Accountant:ALL_STAGE_IDX};
 /* What each department may do by default. A terminal Admin can switch any of these on or off for one staff member
    (Staff Directory > Permissions) — saved on that person's account as grants.caps / grants.stages. */
 const CAP_DEFS = {
-  fen:{label:'Register jobs and edit job details (First Entry Note)', depts:['Admin','Documentation','DTI']},
-  bol:{label:'Complete Book of Life (A-Number and C-Number)', depts:['Admin','Documentation','DTI']},
-  alert:{label:'Raise alerts on jobs', depts:['Admin','Documentation','DTI']},
-  stepDown:{label:'Step down or reactivate a job', depts:['Admin','Documentation','DTI','Field Staff']},
-  exit:{label:'Update the exit number', depts:['Admin','Documentation','DTI','Operations']},
-  transporter:{label:'Record the transporter and add a new driver', depts:['Admin','Documentation','DTI','Transport']},
-  transferNo:{label:'Update the transfer letter number', depts:['Admin','Documentation','Operations']},
+  fen:{label:'Register jobs and edit job details (First Entry Note)', depts:['Admin','Documentation','Accountant','DTI']},
+  bol:{label:'Complete Book of Life (A-Number and C-Number)', depts:['Admin','Documentation','Accountant','DTI']},
+  alert:{label:'Raise alerts on jobs', depts:['Admin','Documentation','Accountant','DTI']},
+  stepDown:{label:'Step down or reactivate a job', depts:['Admin','Documentation','Accountant','DTI','Field Staff']},
+  exit:{label:'Update the exit number', depts:['Admin','Documentation','Accountant','DTI','Operations']},
+  transporter:{label:'Record the transporter and add a new driver', depts:['Admin','Documentation','Accountant','DTI','Transport']},
+  transferNo:{label:'Update the transfer letter number', depts:['Admin','Documentation', 'Accountant','Operations']},
   invoiceNo:{label:'Update the invoice / charge number', depts:['Admin','Accountant','DTI','Operations']},
-  deliveryLoc:{label:'Enter the delivery location', depts:['Admin','Documentation','DTI','Transport']},
+  deliveryLoc:{label:'Enter the delivery location', depts:['Admin','Documentation','Accountant','DTI','Transport']},
   finance:{label:'Financial reconciliation, invoices and payments', depts:['Admin','Accountant']},
-  archiveView:{label:'See the Archive page', depts:['Admin','Documentation','DTI']},
+  archiveView:{label:'See the Archive page', depts:['Admin','Documentation','Accountant','DTI']},
   archive:{label:'Archive and restore jobs', depts:['Admin']},
-  returnDates:{label:'Record the empty-container return dates and check demurrage', depts:['Admin','Documentation','DTI','Transport']}
+  returnDates:{label:'Record the empty-container return dates and check demurrage', depts:['Admin','Documentation','Accountant','DTI','Transport']}
 };
 const FINANCE_LOG_RE = /^(Financial breakdown updated|Duty payment recorded|Invoice uploaded|Invoice on .* (approved|rejected)|Invoice payment status)/;
 function isFinanceLog(l){ return !!l && (l.dept==='Accountant' || FINANCE_LOG_RE.test(String(l.msg||''))); }
@@ -644,7 +694,7 @@ const ALERT_TYPES = {
   'DC Revenue':{action:'Reconcile declared value with Revenue office.'},
   'DC Valuation':{action:'Submit supporting valuation documents.'},
   'T&T':{action:'Confirm Tariff & Trade classification with agent.'},
-  'Seal Mismatch':{action:'Container seal does not match the terminal record. Do not accept delivery — contact Terminal Admin immediately.'}
+  'DSS':{action:'Container seal does not match the terminal record. Do not accept delivery — contact Terminal Admin immediately.'}
 };
 const CLIENT_DOC_TYPES = ['Bill of Lading','PAAR','Other']; // what an importer or agent may upload themselves
 function docTypesFor(){ return (state.role==='importer'||state.role==='agent') ? CLIENT_DOC_TYPES : DOC_TYPES; }
@@ -657,10 +707,10 @@ const ROLE_META = {
   customs:{name:'Customs Officer', sub:'Mother Port (WACT/OMT) transire movement oversight'}
 };
 const ID_TYPE_OPTIONS = {
-  importer:['NIMC National ID','International Passport','Driving License',"Voter's Card",'CAC Document'],
-  agent:['NIMC National ID','International Passport','Driving License',"Voter's Card",'Customs Port Pass','Agency License','CAC Document'],
-  admin:['NIMC National ID','International Passport','Driving License',"Voter's Card",'Company Employee ID','Customs Port Pass'],
-  customs:['Customs Service ID','NIMC National ID','International Passport','Driving License',"Voter's Card"]
+  importer:['CAC Document','NIMC National ID','Driving License','Other'],
+  agent:['Customs Port Pass','Agency License','CAC Document','NIMC National ID','Driving License','Other'],
+  admin:['Company Employee ID','Customs Port Pass','NIMC National ID','Other'],
+  customs:['Customs Service ID','NIMC National ID','Other']
 };
 const STATIONS = ['Onne Port Area II Command','WACT Office','OMT Office','Bonded Terminal Main Yard'];
 
@@ -793,6 +843,7 @@ async function refreshFromStorage(){
     } else if(!modalOpen){
       renderApp();
     }
+    checkNoteNotifications();
   }catch(e){ /* non-fatal — next tick retries */ }
 }
 function connectLiveSocket(){
@@ -879,17 +930,17 @@ async function saveContainers(list, opts){
 }
 async function loadUsers(){ try{ const r = await window.storage.get('users', true); const list = r? JSON.parse(r.value) : seedUsers(); if(r) setBaseline('users', list); return list; }catch(e){ return seedUsers(); } }
 async function saveUsers(list, opts){ state.users = list; try{ await window.storage.set('users', JSON.stringify(list), true, opts); adoptVersions('users', [list]); return true; }catch(e){ await handleSaveFailure(e); return false; } }
-async function loadLog(){ try{ const r = await window.storage.get('activity-log', true); return r? JSON.parse(r.value) : []; }catch(e){ return []; } }
+async function loadLog(){ try{ const r = await window.storage.get('activity-log', true); return r? JSON.parse(r.value) : seedLog(); }catch(e){ return []; } }
 async function saveLog(){ try{ await window.storage.set('activity-log', JSON.stringify(state.log), true); return true; }catch(e){ await handleSaveFailure(e); return false; } }
 async function pushLog(msg, dept, terminalId){
   state.log.unshift({id:'l'+Date.now()+Math.random().toString(16).slice(2), msg, t:new Date().toISOString(), dept: dept||null, terminalId: terminalId!==undefined?terminalId:state.terminalId, ack:[]});
   state.log = state.log.slice(0,200);
   await saveLog();
 }
-async function loadReferrals(){ try{ const r = await window.storage.get('referrals', true); return r? JSON.parse(r.value) : []; }catch(e){ return []; } }
+async function loadReferrals(){ try{ const r = await window.storage.get('referrals', true); return r? JSON.parse(r.value) : seedReferrals(); }catch(e){ return []; } }
 async function saveReferrals(){ try{ await window.storage.set('referrals', JSON.stringify(state.referrals), true); return true; }catch(e){ await handleSaveFailure(e); return false; } }
-async function loadMessages(){ try{ const r = await window.storage.get('messages', true); return r? JSON.parse(r.value) : []; }catch(e){ return []; } }
-async function saveMessages(){ try{ await window.storage.set('messages', JSON.stringify(state.messages), true); return true; }catch(e){ await handleSaveFailure(e); return false; } }
+async function loadMessages(){ try{ const r = await window.storage.get('messages', true); return r? JSON.parse(r.value) : seedMessages(); }catch(e){ return []; } }
+async function saveMessages(opts){ try{ await window.storage.set('messages', JSON.stringify(state.messages), true, opts); return true; }catch(e){ await handleSaveFailure(e); return false; } }
 async function loadSettings(){
   try{ const r = await window.storage.get('platform-settings', true); return r? Object.assign({}, defaultSettings(), JSON.parse(r.value)) : defaultSettings(); }
   catch(e){ return defaultSettings(); }
@@ -899,6 +950,7 @@ function defaultSettings(){
   return { freeDays:4, dailyPenaltyRate:15000, masterHold:false,
     features:{ endToEnd:true, referrals:true, support:true, finance:true } };
 }
+
 async function bootStatic(){
   try{ state.terminals = await loadTerminals(); }catch(e){ state.terminals = seedTerminals(); }
   try{ state.settings = await loadSettings(); }catch(e){ state.settings = defaultSettings(); }
@@ -919,6 +971,152 @@ function blankFinancial(processingCharge,mpt,ship,terminalCharges,clearing,dutie
     sonRemitaAmount:0, sonRemitaRef:null, otherExpenses:[]};
 }
 function seedContainers(){ return []; }
+
+/* ---- Extra demo jobs, messages, notifications: one example of every feature ---- */
+function dayStr(n){ return daysAgo(n).slice(0,10); }
+function atTime(n,hh,mm){ const d=new Date(); d.setDate(d.getDate()-n); d.setHours(hh,mm||0,0,0); return d.toISOString(); }
+var __sjN = 0;
+function sj(id,t,cnum,bol,size,item,dest,party,o){
+  o = o||{}; __sjN++;
+  const doc = t==='t1' ? 'Blessing Eze' : 'Chiamaka Obi';
+  const st = o.stage||0, age = o.age||5, hasBol = o.bol!==false;
+  const c = {id, terminalId:t, containerNumber:cnum, billOfLading:bol0(bol), size, item, destination:dest,
+    owner: party[0]==='o'?party[1]:null, agent: party[0]==='a'?party[1]:null,
+    eta:o.eta||null, arrivedDate:o.arrived||null, arrivedBy:o.arrived?doc:null,
+    bolComplete:hasBol, aNumber:hasBol?'A-'+(231000+__sjN):null, cNumber:hasBol?'C-'+(991000+__sjN):null,
+    transferLetterNumber:o.tl||null, invoiceNumber:o.invNo||null, exitNumber:o.exit||null,
+    stageIdx:st, history:mkHistory(st,age,doc+' (Documentation)'), alerts:o.alerts||[],
+    documents:[{name:'Bill_of_Lading_'+bol.replace(/\W/g,'')+'.pdf', type:'Bill of Lading', uploadedBy:doc, date:daysAgo(age), sizeKB:150+__sjN}].concat(o.docs||[]),
+    financial:Object.assign(blankFinancial(o.charge||0,0,0,0,0,0,'pending',null,null), o.fin||{}),
+    invoices:o.invoices||[], detentionStart:o.det||null, steppedDown:o.step||{status:false,comment:'',by:null,date:null},
+    progressNotes:o.notes||[], loadingDateTime:o.load||null, transportHandover:o.hand||null, duplicateFlag:null, createdAt:daysAgo(age)};
+  return Object.assign(c, o.x||{});
+}
+function bol0(b){ return b; }
+function invo(id,amount,status,pay,by,daysA,name){ return {id, fileName:name, sizeKB:96, fileId:null, mime:'application/pdf', amount, uploadedBy:by||'Ifeoma Chukwuma', date:daysAgo(daysA), status, paymentStatus:pay||'unpaid'}; }
+function seedMoreJobs(){
+  const AC='Ifeoma Chukwuma';
+  const T1TR = {name:'Swift Haulage Ltd', phone:'08099887766', vehicleNumber:'ABJ-421-XA', driverIdNumber:'DL-3382910', by:'Grace Nwosu', date:daysAgo(2)};
+  return [
+    // ---- delivered jobs in different months (monthly + annual reconciliation) ----
+    sj('c9','t1','MSCU7001234','BL-91001','40ft','Frozen Fish','Port Harcourt Cold Store',['o','Ngozi Adeyemi'],{stage:14,age:85,charge:30000,eta:dayStr(88),arrived:dayStr(86),x:{deliveredDate:daysAgo(62),leftTerminalDate:dayStr(64),returnDueDate:dayStr(58),returnedDate:dayStr(60)},
+      fin:{terminalCharges:60000,clearingExpenses:35000,transportation:28000,customsDuties:310000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80011',dutyPaymentDate:daysAgo(70),otherExpenses:[{label:'Reefer plug-in',amount:12000}]},
+      invoices:[invo('i9','185000','approved','paid',AC,66,'Invoice_MSCU7001234.pdf')], tl:'BBT/TR/24/OMT/011', invNo:'18/OMT/1180', exit:'BBT/EX/24/051'}),
+    sj('c10','t1','CSQU3054383','BL-91002','20ft','Ceramic Tiles','Owerri Showroom',['a','Chidi Okonkwo'],{stage:13,age:58,charge:15000,eta:dayStr(60),arrived:dayStr(59),x:{deliveredDate:daysAgo(33)},
+      fin:{terminalCharges:55000,clearingExpenses:30000,transportation:22000,customsDuties:150000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80177',dutyPaymentDate:daysAgo(40),otherExpenses:[{label:'Extra demurrage',amount:18000},{label:'Special escort',amount:9000}]},
+      invoices:[invo('i10','150000','approved','paid',AC,36,'Invoice_CSQU3054383.pdf')], tl:'BBT/TR/24/OMT/012', exit:'BBT/EX/24/052'}),
+    sj('c11','t1','TGHU8123456','BL-91003','40ft','Mobile Phones','Enugu Retail Mall',['o','Tunde Bakare'],{stage:13,age:30,charge:40000,eta:dayStr(32),arrived:dayStr(31),x:{deliveredDate:daysAgo(6)},
+      fin:{terminalCharges:48000,clearingExpenses:20000,transportation:15000,customsDuties:420000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80290',dutyPaymentDate:daysAgo(12)},
+      invoices:[invo('i11','210000','approved','unpaid',AC,7,'Invoice_TGHU8123456.pdf')], tl:'BBT/TR/24/OMT/013', exit:'BBT/EX/24/053',
+      notes:[{id:'n11a',text:'Container delivered to the consignee. Delivery note signed.',by:'Grace Nwosu',date:daysAgo(6)},{id:'n11b',text:'Thank you, received in good condition.',by:'Tunde Bakare',date:daysAgo(5),replyTo:'n11a'}]}),
+    // ---- paid but not yet delivered (annual summary: paid, undelivered) ----
+    sj('c12','t1','HASU4455667','BL-91004','20ft','Cooking Oil','Aba Distribution Centre',['a','Amina Garba'],{stage:9,age:20,charge:22000,eta:dayStr(22),arrived:dayStr(21),
+      fin:{terminalCharges:42000,clearingExpenses:19000,customsDuties:95000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80311',dutyPaymentDate:daysAgo(8)},
+      invoices:[invo('i12','120000','approved','paid',AC,5,'Invoice_HASU4455667.pdf')], tl:'BBT/TR/24/OMT/014', load:daysAgo(8)}),
+    // ---- ETA examples ----
+    sj('c13','t1','OOLU8800123','BL-91005','40ft','Solar Panels','Abuja Energy Hub',['o','Ngozi Adeyemi'],{stage:0,age:1,eta:dayStr(-6),bol:false}),
+    sj('c14','t1','APHU6677881','BL-91006','20ft','Rice (50kg bags)','Kaduna Grain Market',['a','Fatima Sule'],{stage:0,age:6,eta:dayStr(4),bol:false}),
+    sj('c15','t1','FSCU9012345','BL-91007','40ft','Electric Generators','Warri Industrial Estate',['o','Tunde Bakare'],{stage:1,age:10,eta:dayStr(9)}),
+    sj('c16','t1','GESU5566778','BL-91008','20ft','Beverages','Calabar Wholesale',['a','Chidi Okonkwo'],{stage:2,age:9,eta:dayStr(6),arrived:dayStr(3),
+      notes:[{id:'n16a',text:'Vessel arrived three days after the ETA. Documents have been lodged with the Area Controller.',by:'Blessing Eze',date:daysAgo(3)}]}),
+    // ---- alerts ----
+    sj('c17','t1','NYKU3344990','BL-91009','40ft','Cosmetics','Lagos Beauty Supplies',['o','Ngozi Adeyemi'],{stage:5,age:14,eta:dayStr(16),arrived:dayStr(15),
+      alerts:[{id:'a17a',type:'NAFDAC',desc:'Cosmetics consignment needs a NAFDAC product registration certificate.',status:'active',dateDetected:daysAgo(2)},{id:'a17b',type:'SON',desc:'Product certificate was requested and has now been supplied.',status:'resolved',dateDetected:daysAgo(8)}]}),
+    sj('c18','t1','ECMU7788123','BL-91010','20ft','Used Clothing','Onitsha Bridgehead Market',['a','Chidi Okonkwo'],{stage:7,age:17,eta:dayStr(19),arrived:dayStr(18),
+      alerts:[{id:'a18a',type:'DC Valuation',desc:'Declared value is far below the market value for this cargo. Supporting valuation documents are required.',status:'active',dateDetected:daysAgo(3)},{id:'a18b',type:'T&T',desc:'Tariff classification needs confirming with the agent.',status:'active',dateDetected:daysAgo(1)}],
+      notes:[{id:'n18a',text:'Customs asked for the valuation documents. Please send the supplier invoice and the packing list.',by:'Ifeanyi Umeh',date:daysAgo(2)},{id:'n18b',text:'I will bring the supplier invoice to the terminal tomorrow morning.',by:'Chidi Okonkwo',date:daysAgo(2),replyTo:'n18a'},{id:'n18c',text:'Internal: valuation officer is Mr Sani. Do not release before the documents are checked.',by:'Adaeze Obi',date:daysAgo(1),staffOnly:true}]}),
+    sj('c19','t1','BMOU6120045','BL-91011','40ft','Auto Spare Parts','Nnewi Parts Market',['o','Tunde Bakare'],{stage:12,age:26,eta:dayStr(28),arrived:dayStr(27),
+      alerts:[{id:'a19a',type:'DSS',desc:'Seal recorded at examination (SL-48211) does not match the seal recorded at delivery (SL-48299).',status:'active',dateDetected:daysAgo(1)}],
+      x:{sealNumber:'SL-48211',sealNumberDelivery:'SL-48299',sealMismatch:true}, tl:'BBT/TR/24/OMT/015', exit:'BBT/EX/24/054', load:daysAgo(12)}),
+    // ---- detention / empty return overdue ----
+    sj('c20','t1','TEMU2233445','BL-91012','20ft','Plastic Containers','Sapele Depot',['a','Amina Garba'],{stage:13,age:35,eta:dayStr(37),arrived:dayStr(36),det:daysAgo(9),
+      x:{leftTerminalDate:dayStr(10),returnDueDate:dayStr(2)}, hand:{handedOverTo:'Ibrahim Sani (Driver)',contactPhone:'08066554433',by:'Grace Nwosu',date:daysAgo(10)}, tl:'BBT/TR/24/OMT/016', exit:'BBT/EX/24/055', load:daysAgo(15)}),
+    // ---- duplicate registration across terminals ----
+    sj('c21','t1','MSKU3344556','BL-91013','20ft','Bottled Water','Yenagoa Depot',['o','Ngozi Adeyemi'],{stage:1,age:4,eta:dayStr(-2),bol:false}),
+    sj('c22','t2','MSKU3344556','BL-91013-B','20ft','Bottled Water (re-consigned)','Ikorodu Depot',['a','Segun Adewale'],{stage:0,age:2,eta:dayStr(-1),bol:false}),
+    // ---- stepped down ----
+    sj('c23','t1','KKFU1122334','BL-91014','40ft','Frozen Chicken','Benin City Cold Room',['a','Fatima Sule'],{stage:3,age:21,eta:dayStr(23),arrived:dayStr(22),
+      step:{status:true,comment:'Import permit expired before the cargo arrived. Withdrawn from active clearance until the importer renews the permit.',by:'Adaeze Obi',date:daysAgo(4)}}),
+    // ---- archived, and archived with a deletion request waiting for Admin approval ----
+    sj('c24','t1','PONU5566001','BL-91015','20ft','Stationery','Uyo Book Depot',['o','Ngozi Adeyemi'],{stage:14,age:95,charge:12000,eta:dayStr(98),arrived:dayStr(97),
+      x:{deliveredDate:daysAgo(70),archived:{by:'Adaeze Obi',date:daysAgo(30),reason:'Completed and reconciled.'}},
+      fin:{terminalCharges:30000,clearingExpenses:12000,customsDuties:60000,dutyStatus:'paid',dutyPaymentRef:'RCPT-79010',dutyPaymentDate:daysAgo(80)}}),
+    sj('c25','t1','ZIMU9988001','BL-91016','20ft','Unknown cargo','—',['o','Tunde Bakare'],{stage:0,age:12,bol:false,eta:dayStr(10),
+      x:{archived:{by:'Adaeze Obi',date:daysAgo(8),reason:'Registered twice by mistake.'},deleteRequest:{by:'Blessing Eze',byId:'u6',date:daysAgo(1),reason:'Duplicate of another job; no longer needed.'}}}),
+    // ---- transport, handover and transporter change history ----
+    sj('c26','t1','CAIU7766554','BL-91017','40ft','Machinery','Ibadan Workshop',['o','Ngozi Adeyemi'],{stage:8,age:19,eta:dayStr(21),arrived:dayStr(20),tl:'BBT/TR/24/OMT/017',invNo:'18/OMT/1190',load:daysAgo(3),
+      x:{transporter:T1TR,transportHistory:[{name:'Prime Trucks Nig. Ltd',phone:'08033221100',vehicleNumber:'KJA-118-GG',driverIdNumber:'DL-1209384',by:'Grace Nwosu',handoverDate:daysAgo(3)}]},
+      hand:{handedOverTo:'Swift Haulage Ltd (Driver: Kola Ade)',contactPhone:'08099887766',by:'Grace Nwosu',date:daysAgo(2)}}),
+    // ---- finance showcase: duties pending, SON remita, other expenses, pending + rejected invoices, loss ----
+    sj('c27','t1','HDMU4501928','BL-91018','40ft','Pharmaceutical Supplies','Lagos Medical Stores',['o','Ngozi Adeyemi'],{stage:11,age:23,charge:35000,eta:dayStr(25),arrived:dayStr(24),tl:'BBT/TR/24/OMT/018',
+      fin:{terminalCharges:70000,clearingExpenses:45000,transportation:30000,manifestExpenses:12000,paarExpenses:8000,customsDuties:520000,dutyStatus:'pending',sonRemitaAmount:45000,sonRemitaRef:'REM-2024-55102',
+        otherExpenses:[{label:'Lab test fee',amount:22000},{label:'After-hours handling',amount:15000},{label:'Special permit',amount:30000}]},
+      invoices:[invo('i27a','250000','pending','unpaid',AC,2,'Invoice_HDMU4501928_v2.pdf'),Object.assign(invo('i27b','230000','rejected','unpaid',AC,4,'Invoice_HDMU4501928_v1.pdf'),{reviewNote:'Wrong amount on the invoice. Please correct and upload again.'})]}),
+    // ---- comment threads: importer question, staff reply, customs comment ----
+    sj('c28','t1','WHLU3300991','BL-91019','20ft','Industrial Chemicals','Port Harcourt Plant',['a','Fatima Sule'],{stage:6,age:11,eta:dayStr(13),arrived:dayStr(12),tl:'BBT/TR/24/OMT/019',load:daysAgo(1),
+      notes:[{id:'n28a',text:'Loading at the Mother Port has started. Expect the transire in two days.',by:'Grace Nwosu',date:daysAgo(1)},
+        {id:'n28b',text:'Please confirm the truck will carry the hazard placards.',by:'Fatima Sule',date:daysAgo(1),replyTo:'n28a'},
+        {id:'n28c',text:'Confirmed. The truck is fitted with hazard placards and the driver is certified.',by:'Grace Nwosu',date:daysAgo(0),replyTo:'n28b'},
+        {id:'n28d',text:'Container sealed and checked at the Mother Port. All good from Customs.',by:'Aisha Bello',date:daysAgo(0)}]}),
+    // ---- Greenhaven (second terminal) ----
+    sj('c29','t2','SEGU8800221','BL-91020','40ft','Kitchen Appliances','Ikeja Mall',['o','Halima Yusuf'],{stage:14,age:48,charge:28000,eta:dayStr(50),arrived:dayStr(49),x:{deliveredDate:daysAgo(21)},
+      fin:{terminalCharges:52000,clearingExpenses:21000,transportation:16000,customsDuties:240000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80455',dutyPaymentDate:daysAgo(30)},
+      invoices:[invo('i29','160000','approved','paid','Tamuno Wariboko',22,'Invoice_SEGU8800221.pdf')], tl:'BBT/TR/24/WACT/009', exit:'BBT/EX/24/061'}),
+    sj('c30','t2','TRHU7700334','BL-91021','20ft','Wheat Flour','Ajegunle Mill',['a','Segun Adewale'],{stage:1,age:8,eta:dayStr(5),
+      alerts:[{id:'a30a',type:'SON',desc:'Product certificate is required for this flour consignment.',status:'active',dateDetected:daysAgo(1)}]}),
+    sj('c31','t2','UACU5544117','BL-91022','40ft','Office Furniture','Victoria Island Offices',['o','Halima Yusuf'],{stage:10,age:15,eta:dayStr(17),arrived:dayStr(16),tl:'BBT/TR/24/WACT/010',
+      notes:[{id:'n31a',text:'Examination has been scheduled for tomorrow at 10am. Please send your representative.',by:'Chiamaka Obi',date:daysAgo(1)},{id:'n31b',text:'Our representative Mr Bello will be there at 10am.',by:'Halima Yusuf',date:daysAgo(1),replyTo:'n31a'}]})
+  ];
+}
+function seedMessages(){
+  const M = (id,channel,from,role,text,n,hh,extra)=>Object.assign({id,channel,from,fromRole:role,text,mentions:[],fileName:null,fileId:null,mime:null,sizeKB:null,date:atTime(n,hh,7)},extra||{});
+  return [
+    M('m1','client:Ngozi Adeyemi','Ngozi Adeyemi','importer','Good day. When is the vessel carrying OOLU8800123 expected at the port?',3,9),
+    M('m2','client:Ngozi Adeyemi','Blessing Eze','admin','Good day Ngozi. The ETA we have for OOLU8800123 is in six days. We will record the arrival as soon as the vessel docks.',3,10),
+    M('m3','client:Ngozi Adeyemi','Ngozi Adeyemi','importer','Thank you. Please can you also confirm the pending invoice for the pharmaceutical container?',2,14),
+    M('m4','client:Ngozi Adeyemi','Ifeoma Chukwuma','admin','The corrected invoice for HDMU4501928 has been uploaded and is waiting for Admin approval.',1,11,{edited:true}),
+    M('m5','client:Ngozi Adeyemi','Ngozi Adeyemi','importer','Great, thank you. I will check the job page this afternoon.',0,8),
+    M('m6','client:Chidi Okonkwo','Chidi Okonkwo','agent','I am bringing the supplier invoice for ECMU7788123 tomorrow. Who should I hand it to?',2,13),
+    M('m7','client:Chidi Okonkwo','Ifeanyi Umeh','admin','Please hand it to the DTI desk at the terminal office. Ask for Ifeanyi.',2,15),
+    M('m8','client:Fatima Sule','Fatima Sule','agent','I forgot my password and requested a reset. Please help.',1,16),
+    M('m9','client:Tunde Bakare','Tunde Bakare','importer','The generator container FSCU9012345 has been at the first stage for a while. Any update?',1,12),
+    M('m10','internal:t1','Adaeze Obi','admin','@Ifeoma Chukwuma please reconcile the delivered jobs for the month before Friday.',2,9,{mentions:['Ifeoma Chukwuma']}),
+    M('m11','internal:t1','Ifeoma Chukwuma','admin','Noted. I will also add the extra demurrage on CSQU3054383 as an other request.',2,10),
+    M('m12','internal:t1','Grace Nwosu','admin','@Uche Nnamdi the truck for CAIU7766554 is now with Swift Haulage. Please confirm the gate pass.',1,9,{mentions:['Uche Nnamdi']}),
+    M('m13','internal:t1','Blessing Eze','admin','@Adaeze Obi the duplicate job ZIMU9988001 is archived. Waiting for your approval to delete it.',1,15,{mentions:['Adaeze Obi']}),
+    M('m14','customs:t1','Aisha Bello','customs','WHLU3300991 has been sealed and checked at the Mother Port. Transire follows.',0,9),
+    M('m15','customs:t1','Grace Nwosu','admin','Thank you. We will watch for the transire and arrange the truck.',0,10),
+    M('m16','client:Halima Yusuf','Halima Yusuf','importer','Please confirm the examination time for UACU5544117.',1,11),
+    M('m17','client:Halima Yusuf','Chiamaka Obi','admin','Examination is tomorrow at 10am. Send your representative with his ID.',1,12),
+    M('m18','internal:t2','Tamuno Wariboko','admin','The duplicate MSKU3344556 is also registered at the other terminal. Please check the documents.',1,10)
+  ];
+}
+function seedLog(){
+  const L = (id,msg,dept,tid,n,hh)=>({id,msg,t:atTime(n,hh,20),dept,terminalId:tid,ack:[]});
+  return [
+    L('l1','New job registered: MSKU3344556 (FEN) by Blessing Eze. DTI draft assessment required.','DTI','t1',0,9),
+    L('l2','Vessel arrival recorded for GESU5566778: '+fmtDate(dayStr(3))+' (ETA was '+fmtDate(dayStr(6))+') — by Blessing Eze.','Admin','t1',3,11),
+    L('l3','NAFDAC alert raised on NYKU3344990. Compliance certificate required.','Documentation','t1',2,10),
+    L('l4','Invoice uploaded on HDMU4501928 — waiting for Admin approval.','Admin','t1',2,13),
+    L('l5','Invoice on HDMU4501928 rejected by Adaeze Obi: wrong amount.','Accountant','t1',4,15),
+    L('l6','Seal mismatch on BMOU6120045. Do not accept delivery.','Admin','t1',1,8),
+    L('l7','Deletion requested for archived job ZIMU9988001 by Blessing Eze. Waiting for Admin approval.','Admin','t1',1,16),
+    L('l8','Container TEMU2233445 has passed its empty return due date. Penalty is running.','Transport','t1',1,9),
+    L('l9','Job KKFU1122334 stepped down: import permit expired.','Admin','t1',4,12),
+    L('l10','Transporter changed on CAIU7766554: Swift Haulage Ltd.','Transport','t1',2,15),
+    L('l11','Customs comment on WHLU3300991: container sealed and checked.','Admin','t1',0,9),
+    L('l12','Delivered job TGHU8123456 is ready for final reconciliation.','Accountant','t1',6,16),
+    L('l13','SON alert raised on TRHU7700334.','Documentation','t2',1,10),
+    L('l14','New job registered: MSKU3344556 (FEN) by Chiamaka Obi. DTI draft assessment required.','DTI','t2',2,9),
+    L('l15','MSKU3344556 flagged as a duplicate registration, also seen at Belburge International Limited Bonded Terminal (BILBT).','Admin','t2',2,9)
+  ];
+}
+function seedReferrals(){
+  return [
+    {id:'r1',referrerName:'Ngozi Adeyemi',referrerRole:'importer',referredName:'Blue Anchor Traders',referredContact:'08031230000',type:'importer',note:'Imports tiles and wants to use this terminal.',status:'pending',date:daysAgo(3)},
+    {id:'r2',referrerName:'Chidi Okonkwo',referrerRole:'agent',referredName:'Kemi Logistics',referredContact:'kemi@kemilogistics.com',type:'agent',note:'Experienced clearing agent at Onne.',status:'pending',date:daysAgo(1)}
+  ];
+}
 
 /* ========================= HELPERS ========================= */
 function fmtNaira(n){ return '₦' + Number(n||0).toLocaleString('en-NG'); }
@@ -950,7 +1148,8 @@ function capOfUser(u, cap){
 function can(cap){ if(isSCTL()) return false; if(!isStaff()) return false; return capOfUser(Object.assign({}, me(), {role:'admin', department:state.department}), cap); }
 function canSeeFenBol(){ return isStaff() && can('fen'); }
 function normalizeExit(v){ v = String(v==null?'':v).trim(); if(!v) return ''; const m = /^x?[\s\-_.\/#:]*(\d{1,12})$/i.exec(v); return m ? 'X '+m[1] : null; }
-function canSeeFinance(){ return isStaff() && can('finance') && state.settings.features.finance; }
+function isFinanceStaff(){ return isStaff() && (state.department==='Accountant'||state.department==='Admin') && can('finance'); } /* the Admin sees and can change everything; the Accountant keeps the books */
+function canSeeFinance(){ return isFinanceStaff() && state.settings.features.finance; }
 function canEditTransferLetter(c){ return myScopeMatches(c) && can('transferNo'); }
 function canEditInvoiceNumber(c){ return myScopeMatches(c) && can('invoiceNo'); }
 function canEditExitNumber(c){ return myScopeMatches(c) && can('exit'); }
@@ -1021,14 +1220,185 @@ function normalizeContainer(c){
   return merged;
 }
 function computeDuplicateFlags(){ /* the server works this out across every terminal and sends the flag with each job — this terminal can no longer see the other terminals' jobs */ }
+
+/* ---- Reconciliation maths: the processing charge (entered once, at first entry) is what the job brings in; everything else is a cost ---- */
+function jobExpensesOf(c){
+  const f = c.financial||{}; const n = v=>Number(v)||0;
+  if(f.summaryOnly) return n(f.expenses);
+  return n(f.mptRating)+n(f.shippingRating)+n(f.terminalCharges)+n(f.clearingExpenses)+n(f.transportation)+n(f.manifestExpenses)+n(f.paarExpenses)+n(f.customsDuties)+n(f.sonRemitaAmount)+jobOtherOf(c);
+}
+function jobOtherOf(c){ return ((c.financial&&c.financial.otherExpenses)||[]).reduce((s,o)=>s+(Number(o.amount)||0),0); }
+function jobProfitOf(c){ return (Number(c.financial&&c.financial.processingCharge)||0) - jobExpensesOf(c); }
+function plLabel(v){ return v>0 ? 'Profit '+fmtNaira(v) : (v<0 ? 'Loss '+fmtNaira(-v) : 'Break-even'); }
+function plColor(v){ return v>0 ? '#1B6B3A' : (v<0 ? '#B3261E' : 'inherit'); }
+function financeProfitHTML(c){
+  const p = jobProfitOf(c);
+  return `<div class="fin-row" style="font-weight:700;border-top:2px solid var(--ink);"><span>Total expenses</span><span>${fmtNaira(jobExpensesOf(c))}</span></div>
+    <div class="fin-row" style="font-weight:700;"><span>${p>=0?'Profit':'Loss'} on this job</span><span style="color:${plColor(p)};">${p<0?'−':''}${fmtNaira(Math.abs(p))}</span></div>`;
+}
 function financialTotalOf(c, extra){
   extra = extra||0;
+  if(c.financial && c.financial.summaryOnly) return Number(c.financial.processingCharge)||0; /* everyone else sees only the processing charge written at first entry (SCTL also gets the expenses total) */
   const other = (c.financial.otherExpenses||[]).reduce((s,o)=>s+(Number(o.amount)||0),0);
   return c.financial.processingCharge + c.financial.mptRating + c.financial.shippingRating + c.financial.terminalCharges + c.financial.clearingExpenses +
     c.financial.transportation + c.financial.manifestExpenses + c.financial.paarExpenses + c.financial.customsDuties + c.financial.sonRemitaAmount + other + extra;
 }
 
+
+/* ---- Finance visibility: only Admin and Accountant see the breakdown; everyone else sees one total ---- */
+function sonRemitaRefOf(c){ return c.sonRemitaRef!==undefined ? c.sonRemitaRef : ((c.financial&&c.financial.sonRemitaRef)||null); }
+function otherRowHTML(id, o, orig){
+  return `<div class="fin-edit-row" data-orig="${orig}"><input type="text" value="${jobEsc(o.label||'')}" placeholder="What was it for?"><input type="number" min="0" step="any" value="${o.amount?o.amount:''}" placeholder="Amount (₦)"><button type="button" class="btn small ghost" title="Remove this line" onclick="this.parentNode.remove()">✕</button></div>`;
+}
+function otherFromDom(c){
+  const list = document.getElementById('other-expenses-list'); if(!list) return;
+  const old = c.financial.otherExpenses||[], out = [];
+  list.querySelectorAll('.fin-edit-row').forEach(r=>{
+    const t = r.querySelector('input[type=text]'), n = r.querySelector('input[type=number]');
+    const label = (t&&t.value||'').trim(), amount = Number(n&&n.value)||0;
+    if(!label && !amount) return;
+    const o = old[Number(r.dataset.orig)];
+    out.push(Object.assign({}, o||{}, {label: label||'Other', amount}));
+  });
+  c.financial.otherExpenses = out;
+}
+function financeFieldsFromDom(c){
+  ['processingCharge','mptRating','shippingRating','terminalCharges','clearingExpenses','transportation','manifestExpenses','paarExpenses','sonRemitaAmount'].forEach(k=>{
+    const el = document.getElementById('fin-'+k);
+    if(el) c.financial[k] = Number(el.value)||0;
+  });
+  otherFromDom(c);
+}
+function removeOtherExpense(id, i){ /* rows are removed in place now */ }
+async function saveSonRemitaRef(id){
+  const c = byId(id);
+  const el = document.getElementById('son-remita-ref');
+  c.sonRemitaRef = (el && el.value.trim()) || null;
+  if(!(await saveContainers(state.containers))) return;
+  await pushLog(`SON Remita reference set for ${c.containerNumber} by ${state.person}: ${c.sonRemitaRef||'cleared'}`, 'Documentation', c.terminalId);
+  toast('SON Remita reference saved.');
+  openContainer(id);
+}
+function sctlFinanceHTML(){
+  const terms = state.terminals.filter(t=>t.status!=='pending');
+  return `
+    <div class="topbar"><div><h1>Reconciliation</h1><div class="desc">The processing charge written at first entry for each job, terminal by terminal. Expenses, profit and loss stay inside each terminal.</div></div></div>
+    ${terms.map(t=>{
+      const jobs = state.containers.filter(c=>c.terminalId===t.id && c.financial);
+      return `<div class="panel"><div class="panel-head"><h3>${jobEsc(t.name)}</h3><span class="tag-line">${jobs.length} job${jobs.length===1?'':'s'}</span></div>
+        <div class="panel-body" style="padding:0 18px;">${jobs.length ? jobs.map(c=>`<div class="job-row" style="grid-template-columns:1.3fr .6fr 1.5fr 1fr;cursor:pointer;" onclick="openContainer('${c.id}')"><div style="font-weight:600;" class="mono">${jobEsc(c.containerNumber)}</div><div>${jobEsc(c.size||'—')}</div><div class="tag-line">${jobEsc(c.item||'—')}</div><div style="font-weight:700;text-align:right;">${fmtNaira(c.financial.processingCharge)}</div></div>`).join('') : '<div class="empty-state" style="padding:16px;">No jobs with a processing charge yet.</div>'}</div></div>`;
+    }).join('')}`;
+}
+
+/* ---- New messages on a job: badge in the list and a pop-up at the side ---- */
+var __seenMem = {}, __popupShown = {};
+function _seenKey(){ return 'ct-seen-notes-'+(state.userId||state.person||'x'); }
+function _loadSeen(){ try{ const raw = localStorage.getItem(_seenKey()); if(raw!==null) return JSON.parse(raw)||{}; }catch(e){} return __seenMem[_seenKey()] || null; }
+function _saveSeen(m){ __seenMem[_seenKey()] = m; try{ localStorage.setItem(_seenKey(), JSON.stringify(m)); }catch(e){} }
+function _noteKey(c,n){ return c.id+':'+(n.id || (n.date+'|'+n.by)); }
+function visibleNotes(c){ return (c.progressNotes||[]).filter(n=>n && (!n.staffOnly || canSeeStaffNotes())); }
+function unreadNotes(c){ const seen = _loadSeen()||{}; return visibleNotes(c).filter(n=>n.by!==state.person && !seen[_noteKey(c,n)]); }
+function markNotesSeen(c){ const seen = _loadSeen()||{}; visibleNotes(c).forEach(n=>{ seen[_noteKey(c,n)] = 1; }); _saveSeen(seen); }
+function noteBadgeHTML(c){ const n = unreadNotes(c).length; return n ? `<span class="msg-flag" title="${n} new message${n===1?'':'s'} on this job">💬 ${n}</span>` : ''; }
+function baselineNotes(){
+  if(_loadSeen()!==null) return; // first time on this device: what is already there counts as read
+  const seen = {}; visibleContainers().forEach(c=>visibleNotes(c).forEach(n=>{ seen[_noteKey(c,n)] = 1; })); _saveSeen(seen);
+}
+function hideNotePopupFor(id){ document.querySelectorAll('#note-popup .np').forEach(e=>{ if(e.dataset.cid===id) e.remove(); }); document.querySelectorAll('.job-row .msg-flag').forEach(e=>{ const r=e.closest('.job-row'); if(r && String(r.getAttribute('onclick')||'').indexOf("'"+id+"'")>=0) e.remove(); }); }
+function checkNoteNotifications(){
+  try{
+    if(!state.role) return;
+    baselineNotes();
+    const fresh = [];
+    visibleContainers().forEach(c=>{ unreadNotes(c).forEach(n=>{ const k = _noteKey(c,n); if(!__popupShown[k]){ __popupShown[k] = 1; fresh.push({c,n}); } }); });
+    if(!fresh.length) return;
+    let box = document.getElementById('note-popup');
+    if(!box){ box = document.createElement('div'); box.id = 'note-popup'; document.body.appendChild(box); }
+    fresh.slice(-3).forEach(({c,n})=>{
+      const d = document.createElement('div'); d.className = 'np'; d.dataset.cid = c.id;
+      d.innerHTML = '<span class="x" onclick="event.stopPropagation();this.parentNode.remove()">✕</span>💬 New message on <b>'+docEsc(c.containerNumber)+'</b><small>'+docEsc(n.by)+': '+docEsc(String(n.text||'').slice(0,90))+'</small>';
+      d.onclick = function(){ d.remove(); openContainer(c.id); };
+      box.appendChild(d);
+      setTimeout(()=>{ if(d.parentNode) d.remove(); }, 25000);
+    });
+  }catch(e){ /* a pop-up must never break the app */ }
+}
+
+/* ---- Download every document on a job in one zip ---- */
+var _crcT;
+function _crc32(buf){
+  if(!_crcT){ _crcT = []; for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; _crcT[n] = c>>>0; } }
+  let c = 0xFFFFFFFF; for(let i=0;i<buf.length;i++) c = _crcT[(c^buf[i])&255]^(c>>>8); return (c^0xFFFFFFFF)>>>0;
+}
+function buildZip(files){
+  const enc = new TextEncoder(), parts = [], central = []; let offset = 0;
+  const u16 = n=>[n&255,(n>>8)&255], u32 = n=>[n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255];
+  const now = new Date(), dt = ((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate(), tm = (now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+  files.forEach(f=>{
+    const nm = enc.encode(f.name), crc = _crc32(f.data), sz = f.data.length;
+    const lh = new Uint8Array([0x50,0x4b,3,4, 20,0, 0,8, 0,0, ...u16(tm), ...u16(dt), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(nm.length), 0,0]);
+    parts.push(lh, nm, f.data); central.push({nm,crc,sz,offset}); offset += lh.length+nm.length+sz;
+  });
+  const cdStart = offset; let cdSize = 0;
+  central.forEach(e=>{
+    const ch = new Uint8Array([0x50,0x4b,1,2, 20,0, 20,0, 0,8, 0,0, ...u16(tm), ...u16(dt), ...u32(e.crc), ...u32(e.sz), ...u32(e.sz), ...u16(e.nm.length), 0,0, 0,0, 0,0, 0,0, 0,0,0,0, ...u32(e.offset)]);
+    parts.push(ch, e.nm); cdSize += ch.length+e.nm.length;
+  });
+  parts.push(new Uint8Array([0x50,0x4b,5,6, 0,0, 0,0, ...u16(central.length), ...u16(central.length), ...u32(cdSize), ...u32(cdStart), 0,0]));
+  return new Blob(parts, {type:'application/zip'});
+}
+async function downloadAllDocs(cid){
+  const c = byId(cid); const docs = (c.documents||[]).filter(d=>d.fileId);
+  if(!docs.length){ toast('There are no stored documents on this job yet.'); return; }
+  toast('Preparing '+docs.length+' document'+(docs.length===1?'':'s')+'…');
+  try{
+    const used = {}, files = [];
+    for(const d of docs){
+      const blob = await fetchStoredFile(d.fileId);
+      let nm = String(d.name||'document').replace(/[\\\/:*?"<>|]/g,'_'); const base = nm;
+      for(let k=2; used[nm.toLowerCase()]; k++){ const m = /^(.*?)(\.[A-Za-z0-9]+)?$/.exec(base); nm = (m[1]||'document')+' ('+k+')'+(m[2]||''); }
+      used[nm.toLowerCase()] = 1;
+      files.push({name:nm, data:new Uint8Array(await blob.arrayBuffer())});
+    }
+    const url = URL.createObjectURL(buildZip(files));
+    const a = document.createElement('a'); a.href = url; a.download = c.containerNumber+' documents.zip'; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  }catch(e){ showErrorBanner('Could not download', e.message); }
+}
+
+/* ---- Internal staff chat: tag the person you mean ---- */
+function staffNamesForTag(){ return (state.users||[]).filter(u=>u.role==='admin' && u.terminalId===state.terminalId && u.name!==state.person && (!u.status || u.status==='active')).map(u=>u.name).sort(); }
+function insertTag(){
+  const sel = document.getElementById('msg-tag'), t = document.getElementById('msg-text');
+  if(!sel || !t || !sel.value) return;
+  t.value = t.value + (t.value && !/\s$/.test(t.value) ? ' ' : '') + '@' + sel.value + ' ';
+  sel.value = ''; t.focus();
+}
+function tagUIHTML(channel){
+  if(!String(channel).startsWith('internal:')) return '';
+  const names = staffNamesForTag(); if(!names.length) return '';
+  return `<div class="field" style="margin-top:8px;"><label>Tag a staff member (optional)</label><select id="msg-tag" onchange="insertTag()"><option value="">Choose a person…</option>${names.map(n=>`<option>${docEsc(n)}</option>`).join('')}</select></div>`;
+}
+function msgTextHTML(m){
+  let t = docEsc(m.text);
+  (m.mentions||[]).forEach(n=>{ const e = docEsc('@'+n); t = t.split(e).join('<b style="color:#7A5A00;background:#FFF1BF;border-radius:4px;padding:0 3px;">'+e+'</b>'); });
+  return t;
+}
+
 /* ========================= AUTH ========================= */
+/* ========================= FORGOT PASSWORD ========================= */
+function pwReqPill(u){
+  return u && u.pwResetRequestedAt ? `<span class="pill wait" title="Asked on ${jobEsc(fmtDateTime(u.pwResetRequestedAt))}">🔑 Reset requested</span>` : '';
+}
+function pwResetPanelHTML(){
+  const pend = state.users.filter(u=>u.pwResetRequestedAt && u.id!==state.userId &&
+    (isSCTL() ? true : (isTerminalAdmin() && u.terminalId===state.terminalId && u.role!=='sctl' && u.role!=='customs')));
+  if(!pend.length) return '';
+  return `<div class="panel inbox-panel"><div class="panel-head"><h3>🔑 Password reset requests</h3><span class="tag-line">${pend.length} waiting</span></div>
+    <div class="panel-body">${pend.map(u=>`<div class="inbox-row"><span><b>${jobEsc(u.name)}</b> <span class="tag-line">${jobEsc(u.login)} · ${jobEsc(u.role==='admin'?(u.department||'Staff'):u.role)} · asked ${jobEsc(fmtDateTime(u.pwResetRequestedAt))}</span></span>
+      <button class="btn small secondary" onclick="adminResetPassword('${u.id}')">Reset password</button></div>`).join('')}</div></div>`;
+}
+
 function renderLogin(){
   document.getElementById('login-screen').style.display='flex';
   document.getElementById('app-shell').style.display='none';
@@ -1078,6 +1448,7 @@ function signInHTML(){
         <select id="s-role"><option value="importer">Importer</option><option value="agent">Clearing Agent</option><option value="admin">Bonded Terminal</option><option value="customs">Customs Officer</option><option value="sctl">SCTL Super Admin</option></select></div>
       <div class="field"><label>Email or Username</label><input type="text" id="s-login" required placeholder="you@example.com"></div>
       <div class="field"><label>Password</label><input type="password" id="s-password" required placeholder="••••••••"></div>
+      <div style="text-align:right;margin:-4px 0 12px;"><a href="#" class="forgot-link" onclick="state.forgotDraft={login:(document.getElementById('s-login')||{}).value||''};setAuthView('forgot');return false;">Forgot password?</a></div>
       <button class="btn full" type="submit">Sign In</button>
     </form>
     <div class="auth-foot"><button type="button" onclick="startForgot()">Forgot password?</button></div>
@@ -1456,7 +1827,7 @@ function openProfile(uid){
   const editingOther = uid !== state.userId;
   const canEditAll = isSCTL() || isTerminalAdmin();
   const perms = permissionsFor(u);
-  const idOptions = Array.from(new Set((ID_TYPE_OPTIONS[u.role]||[]).concat(Object.values(ID_TYPE_OPTIONS).flat(), u.idType?[u.idType]:[])));
+  const idOptions = Array.from(new Set((ID_TYPE_OPTIONS[u.role]||[]).concat(Object.values(ID_TYPE_OPTIONS).flat(), u.idType?[u.idType]:[]))).filter(t=>t!=='Other').concat('Other');
   const canPickDept = canEditAll && u.role==='admin' && uid!==state.userId;
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-head">
@@ -1584,6 +1955,7 @@ async function adminResetPasswordApply(uid, custom){
   try{
     await apiFetch('/api/auth/set-password', {method:'POST', body: JSON.stringify({email: u.login, newPassword: temp})});
   }catch(err){ toast('Could not reset password: ' + (err.message||'server error')); return; }
+  delete u.pwResetRequestedAt;
   await pushLog(`Password reset for ${u.name} by ${state.person}`, null, u.terminalId);
   state.lastClientCreds = clientCredentialsText(u, temp);
   showModalHTML(`
@@ -1617,8 +1989,8 @@ function buildNav(){
     return nav;
   }
   if(state.role==='sctl'){
-    return [['dashboard','Global Dashboard'],['terminals','Terminal Management'],['verification','Verification Queue'],['archive','Archive'],
-      ['reports','Performance Reports'],['activity','Activity Log'],['settings','Platform Settings']];
+    return [['dashboard','Global Dashboard'],['terminals','Terminal Management'],['accounts','Accounts'],['alljobs','All Jobs'],['verification','Verification Queue'],['archive','Archive'],
+      ['reports','Performance Reports'],['finance','Reconciliation'],['activity','Activity Log'],['settings','Platform Settings']];
   }
   if(state.role==='customs'){
     return [['dashboard','Mother Port Movements'],['directory','Terminal Directory'],['search','Container / BOL Search'],['comments','Comments']];
@@ -1660,6 +2032,7 @@ function renderApp(){
   document.getElementById('mobile-title').textContent = ROLE_META[state.role].name;
   document.getElementById('brand-sub').textContent = state.terminalId ? terminalName(state.terminalId).toUpperCase() : 'SEALINE CONTAINER TERMINAL LTD';
   renderTab();
+  checkNoteNotifications();
 }
 function switchTab(id){ state.activeTab=id; document.getElementById('sidebar').classList.remove('open'); renderApp(); }
 function renderTab(){
@@ -1674,10 +2047,13 @@ function renderTab(){
   } else if(state.role==='sctl'){
     if(state.activeTab==='dashboard') body = sctlDashboardHTML();
     else if(state.activeTab==='terminals') body = sctlTerminalsHTML();
+    else if(state.activeTab==='accounts') body = sctlAccountsHTML();
+    else if(state.activeTab==='alljobs') body = sctlAllJobsHTML();
     else if(state.activeTab==='verification') body = verificationHTML();
     else if(state.activeTab==='reports') body = reportsHTML();
     else if(state.activeTab==='activity') body = activityLogHTML();
     else if(state.activeTab==='archive') body = archiveHTML();
+    else if(state.activeTab==='finance') body = sctlFinanceHTML();
     else if(state.activeTab==='settings') body = sctlSettingsHTML();
   } else if(state.role==='customs'){
     if(state.activeTab==='dashboard') body = customsMotherportHTML();
@@ -1721,9 +2097,9 @@ function jobListHTML(list, opts){
     if((state.role==='importer'||state.role==='agent') && docsNeedingFix(c).length) statusHtml = '<span class="flag">Document rejected</span>';
     if(c.steppedDown.status) statusHtml = `<span class="pill stepped">Stepped down</span>`;
     const dupBadge = c.duplicateFlag ? `<span class="flag" style="margin-left:4px;" title="Also registered by ${c.duplicateFlag.terminalNames.join(', ')}">DUPLICATE</span>` : '';
-    return `<div class="job-row" data-cnum="${c.containerNumber.toLowerCase()}" data-bol="${c.billOfLading.toLowerCase()}" data-owner="${c.owner||''}" data-agent="${c.agent||''}" data-stagegroup="${c.steppedDown.status?'stepped':stageGroup(c)}" onclick="openContainer('${c.id}')">
-      <div class="cnum">${c.containerNumber}${dupBadge}</div>
-      <div><div>${c.item}</div><div class="bol">${c.billOfLading} · ${c.size}${!c.bolComplete?' · <span style=\'color:#8F6F22\'>DTI assessment pending</span>':''}${c.transporter&&c.transporter.name?` · <span class="mono" style="font-size:10px;">Transporter: ${c.transporter.name}</span>`:''}</div></div>
+    return `<div class="job-row" data-cnum="${c.containerNumber.toLowerCase()}" data-bol="${c.billOfLading.toLowerCase()}" data-owner="${c.owner||''}" data-agent="${c.agent||''}" data-alert="${alerts.length?1:0}" data-dup="${c.duplicateFlag?1:0}" data-stage="${c.stageIdx}" data-stagegroup="${c.steppedDown.status?'stepped':stageGroup(c)}" onclick="openContainer('${c.id}')">
+      <div class="cnum">${c.containerNumber}${dupBadge}${noteBadgeHTML(c)}</div>
+      <div><div>${c.item}</div><div class="bol">${c.billOfLading} · ${c.size}${(c.eta||c.arrivedDate)?' · '+etaHTML(c):''}${!c.bolComplete?' · <span style=\'color:#8F6F22\'>DTI assessment pending</span>':''}${c.transporter&&c.transporter.name?` · <span class="mono" style="font-size:10px;">Transporter: ${c.transporter.name}</span>`:''}</div></div>
       <div class="stage-lbl">${stage.label}</div>
       <div class="owner">${colText}</div>
       <div>${statusHtml}</div>
@@ -1744,7 +2120,8 @@ function applyAdminFilters(){
   const q = document.getElementById('job-search') ? document.getElementById('job-search').value.toLowerCase() : '';
   document.querySelectorAll('#job-list .job-row').forEach(r=>{
     let show = true;
-    if(status!=='all' && r.dataset.stagegroup!==status) show=false;
+    if(status==='alerts'){ if(r.dataset.alert!=='1') show=false; }
+    else if(status!=='all' && r.dataset.stagegroup!==status) show=false;
     if(owner!=='all' && r.dataset.owner!==owner) show=false;
     if(agent!=='all' && r.dataset.agent!==agent) show=false;
     if(q && !(r.textContent.toLowerCase().includes(q) || (r.dataset.cnum||'').includes(q) || (r.dataset.bol||'').includes(q))) show=false;
@@ -1762,10 +2139,10 @@ function userDashboardHTML(){
     <div class="topbar"><div><h1>${state.role==='importer'?'My Containers':'My Client Jobs'}</h1>
       <div class="desc">Real-time status for every container linked to ${state.person}, from Customs Processing through to delivery.</div></div></div>
     <div class="metric-row">
-      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Total ${roleWord}</div></div>
-      <div class="metric"><div class="num">${activeCount}</div><div class="lbl">In progress</div></div>
-      <div class="metric"><div class="num">${alertCount}</div><div class="lbl">Active alerts</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.stageIdx>=13).length}</div><div class="lbl">Delivered / returned</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('all')}"><div class="num">${list.length}</div><div class="lbl">Total ${roleWord}</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('progress')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('progress')}"><div class="num">${activeCount}</div><div class="lbl">In progress</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('alerts')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('alerts')}"><div class="num">${alertCount}</div><div class="lbl">Active alerts</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('delivered')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('delivered')}"><div class="num">${list.filter(c=>c.stageIdx>=13).length}</div><div class="lbl">Delivered / returned</div></div>
     </div>
     <div class="panel">
       <div class="panel-head"><h3>Containers</h3>
@@ -1827,6 +2204,7 @@ function supportHTML(){
               ${msgs.length? msgs.map(m=>msgBubbleHTML(m)).join('') : '<div class="tag-line">No messages in this thread yet.</div>'}
             </div>
             <textarea id="msg-text" rows="2" placeholder="Type a message…"></textarea>
+            ${tagUIHTML(activeThread)}
             <div class="field" style="margin-top:8px;"><label>Attach a document (optional)</label><input type="file" id="msg-file"></div>
             <button class="btn small" onclick="sendMessage('${activeThread}')">Send</button>
           </div></div>
@@ -1843,10 +2221,11 @@ function supportHTML(){
 }
 function msgBubbleHTML(m){
   const mine = m.from===state.person;
-  return `<div class="msg-bubble ${mine?'mine':''}">
-    <div class="msg-meta">${m.from} · ${fmtDateTime(m.date)}</div>
-    ${m.text?`<div>${docEsc(m.text)}</div>`:''}
+  return `<div class="msg-bubble ${mine?'mine':''}" id="msg-${m.id}">
+    <div class="msg-meta">${m.from} · ${fmtDateTime(m.date)}${m.edited?' · edited':''}</div>
+    ${m.text?`<div>${msgTextHTML(m)}</div>`:''}
     ${msgFileHTML(m)}
+    ${mine?`<div class="msg-meta" style="margin-top:4px;"><a href="#" onclick="startMsgEdit('${m.id}');return false;">Edit</a> · <a href="#" style="color:var(--rust);" onclick="confirmDeleteMsg('${m.id}');return false;">Delete</a></div>`:''}
   </div>`;
 }
 function openThread(key){ state.supportThreadKey = key; renderTab(); }
@@ -1863,8 +2242,9 @@ async function sendMessage(channel){
     try{ up = await uploadFileToServer(file); }
     catch(e){ if(e && e.status===401){ sessionExpired(); return; } showErrorBanner('Not sent', e.message); return; }
   }
-  state.messages.push({id:'m'+Date.now(), channel, from:state.person, fromRole:state.role, text, fileName:up?up.name:null, fileId:up?up.id:null, mime:up?up.mime:null, sizeKB:file?Math.max(1,Math.round(file.size/1024)):null, date:new Date().toISOString()});
+  state.messages.push({id:'m'+Date.now(), channel, from:state.person, fromRole:state.role, text, mentions:(String(channel).startsWith('internal:')?staffNamesForTag().filter(n=>text.includes('@'+n)):[]), fileName:up?up.name:null, fileId:up?up.id:null, mime:up?up.mime:null, sizeKB:file?Math.max(1,Math.round(file.size/1024)):null, date:new Date().toISOString()});
   await saveMessages();
+  try{ const last = state.messages[state.messages.length-1]; for(const n of (last.mentions||[])){ const u = state.users.find(x=>x.name===n); if(u) await pushLog(`${state.person} tagged ${n} in Internal Staff Chat: "${text.length>120?text.slice(0,120)+'…':text}"`, u.department||null, state.terminalId); } }catch(e){}
   toast('Message sent.');
   renderTab();
 }
@@ -1906,7 +2286,7 @@ function computePendingTasks(){
   const list = state.containers.filter(c=>c.terminalId===state.terminalId && !c.steppedDown.status);
   const tasks = [];
   const dept = state.department;
-  if(dept==='Documentation' || dept==='Admin'){
+  if(dept==='Documentation' || dept==='Accountant' || dept==='Admin'){
     list.filter(c=>!c.transferLetterNumber).forEach(c=>tasks.push({text:`${c.containerNumber} is missing a transfer letter number`, id:c.id}));
   }
   if(dept==='DTI' || dept==='Admin'){
@@ -1943,6 +2323,7 @@ function adminDashboardHTML(){
     <div class="topbar"><div><h1>${terminalName(state.terminalId)} — Terminal Dashboard</h1><div class="desc">Active jobs at your bonded terminal. Stepped-down jobs are recorded permanently in End to End.</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">${isTerminalAdmin()?`<button class="btn secondary" onclick="openRegisterClient()">+ Register importer / agent</button>`:''}${canSeeFenBol()?`<button class="btn" onclick="switchTab('fen')">+ Register new job</button>`:''}</div></div>
 
+    ${pwResetPanelHTML()}
     ${tasks.length ? `
     <div class="panel inbox-panel">
       <div class="panel-head"><h3>⚠ Pending tasks for ${state.department}</h3><span class="tag-line">${tasks.length} outstanding</span></div>
@@ -1961,15 +2342,15 @@ function adminDashboardHTML(){
     </div>` : ''}
 
     <div class="metric-row">
-      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Active jobs</div></div>
-      <div class="metric"><div class="num">${inCPC}</div><div class="lbl">In CPC processing</div></div>
-      <div class="metric"><div class="num">${atTerminal}</div><div class="lbl">At the terminal</div></div>
-      <div class="metric"><div class="num">${alerts}</div><div class="lbl">Active alerts</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('all');}"><div class="num">${list.length}</div><div class="lbl">Active jobs</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('cpc')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('cpc');}"><div class="num">${inCPC}</div><div class="lbl">In CPC processing</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('terminal')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('terminal');}"><div class="num">${atTerminal}</div><div class="lbl">At the terminal</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('alerts')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('alerts');}"><div class="num">${alerts}</div><div class="lbl">Active alerts</div></div>
     </div>
     <div class="panel">
       <div class="panel-head"><h3>Active jobs</h3>
         <div class="toolbar">
-          <select id="f-status" onchange="applyAdminFilters()"><option value="all">All statuses</option><option value="cpc">In CPC</option><option value="terminal">At terminal</option><option value="delivered">Delivered</option></select>
+          <select id="f-status" onchange="applyAdminFilters()"><option value="all">All statuses</option><option value="cpc">In CPC</option><option value="terminal">At terminal</option><option value="delivered">Delivered</option><option value="alerts">With active alerts</option></select>
           <select id="f-owner-filter" onchange="applyAdminFilters()"><option value="all">All owners</option>${owners.map(o=>`<option>${o}</option>`).join('')}</select>
           <select id="f-agent-filter" onchange="applyAdminFilters()"><option value="all">All agents</option>${agents.map(a=>`<option>${a}</option>`).join('')}</select>
           <input type="text" id="job-search" placeholder="Search container, BOL…" oninput="applyAdminFilters()">
@@ -2001,6 +2382,7 @@ function fenHTML(){
           <div class="field"><label>Container size *</label><select id="f-size" required><option value="20ft">20ft</option><option value="40ft">40ft</option></select></div>
           <div class="field"><label>Item description *</label><input type="text" id="f-item" required placeholder="e.g. Consumer Electronics"></div>
           <div class="field"><label>Destination *</label><input type="text" id="f-dest" required placeholder="e.g. Lagos Mainland Warehouse"></div>
+          <div class="field"><label>ETA (Estimated Time of Arrival) *</label><input type="date" id="f-eta" required></div>
           <div class="field"><label>Job brought by *</label>
             <select id="f-jobtype" onchange="onFenTypeChange()" required><option value="importer">Importer (direct)</option><option value="agent">Clearing Agent</option></select></div>
           <div class="field" id="f-owner-field"><label>Importer *</label>
@@ -2040,7 +2422,9 @@ async function submitFEN(e){
   const jobtype = document.getElementById('f-jobtype').value;
   const owner = jobtype==='importer' ? document.getElementById('f-owner').value : null;
   const agent = jobtype==='agent' ? document.getElementById('f-agent').value : null;
+  const eta = (document.getElementById('f-eta')||{value:''}).value;
   if(!cnum || !bol){ toast('Container number and Bill of Lading are required.'); return; }
+  if(!eta){ toast('Enter the ETA (estimated time of arrival).'); return; }
   if(jobtype==='importer' && !owner){ toast('Select an importer, or register one first.'); return; }
   if(jobtype==='agent' && !agent){ toast('Select a clearing agent, or register one first.'); return; }
   if(state.containers.some(c=>c.terminalId===state.terminalId && c.containerNumber===cnum)){ toast('That container number is already registered at your terminal.'); return; }
@@ -2048,7 +2432,7 @@ async function submitFEN(e){
     id:'c'+Date.now(), terminalId:state.terminalId, containerNumber:cnum, billOfLading:bol,
     size:document.getElementById('f-size').value,
     item:document.getElementById('f-item').value.trim() || 'Unspecified cargo',
-    destination:document.getElementById('f-dest').value.trim() || 'Not specified',
+    destination:document.getElementById('f-dest').value.trim() || 'Not specified', eta,
     owner, agent, bolComplete:false, aNumber:null, cNumber:null, stageIdx:0,
     history:[{stage:0, t:new Date().toISOString(), user:state.person}],
     alerts:[], documents:[],
@@ -2073,23 +2457,24 @@ function bolHTML(){
   return `
     <div class="topbar"><div><h1>Book of Life</h1><div class="desc">Every job's identification numbers and DTI assessment status in one place — transfer letter, invoice/charge number, A-Number, C-Number, and exit number, including stepped-down jobs. Visible to Admin, Documentation, and DTI only.</div></div></div>
     <div class="metric-row">
-      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Total jobs</div></div>
-      <div class="metric"><div class="num">${complete.length}</div><div class="lbl">Assessment complete</div></div>
-      <div class="metric"><div class="num">${pending.length}</div><div class="lbl">Awaiting DTI assessment</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="scrollHit('bol-ref')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollHit('bol-ref')}"><div class="num">${list.length}</div><div class="lbl">Total jobs</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="scrollHit('bol-complete')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollHit('bol-complete')}"><div class="num">${complete.length}</div><div class="lbl">Assessment complete</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="scrollHit('bol-pending')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollHit('bol-pending')}"><div class="num">${pending.length}</div><div class="lbl">Awaiting DTI assessment</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="goJobsKind('stepped')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goJobsKind('stepped')}"><div class="num">${list.filter(c=>c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
     </div>
-    <div class="panel"><div class="panel-head"><h3>Reference numbers — every job's identification numbers</h3></div>
+    <div class="panel" id="bol-ref"><div class="panel-head"><h3>Reference numbers — every job's identification numbers</h3></div>
       <div class="panel-body" style="padding:0 18px;">${bolReferenceNumbersListHTML(list)}</div></div>
-    <div class="panel"><div class="panel-head"><h3>Awaiting DTI assessment</h3></div>
+    <div class="panel" id="bol-pending"><div class="panel-head"><h3>Awaiting DTI assessment</h3></div>
       <div class="panel-body" style="padding:0 18px;">${bolPendingListHTML(pending)}</div></div>
-    <div class="panel"><div class="panel-head"><h3>Assessment complete</h3></div>
+    <div class="panel" id="bol-complete"><div class="panel-head"><h3>Assessment complete</h3></div>
       <div class="panel-body" style="padding:0 18px;">${bolCompleteListHTML(complete)}</div></div>`;
 }
 function bolReferenceNumbersListHTML(list){
   if(list.length===0) return '<div class="empty-state" style="padding:20px;">No jobs registered yet.</div>';
-  return list.map(c=>`<div class="job-row" style="grid-template-columns:120px 1fr 1fr 1fr 1fr;" onclick="openContainer('${c.id}')">
+  return list.map(c=>`<div class="job-row" style="grid-template-columns:120px 1fr 1fr 1fr 1fr 1fr;" onclick="openContainer('${c.id}')">
     <div class="cnum">${c.containerNumber}</div>
     <div class="tag-line">TL: ${c.transferLetterNumber||'—'}</div>
+    <div class="tag-line mono">SON: ${jobEsc(sonRemitaRefOf(c))||'—'}</div>
     <div class="tag-line">Inv: ${c.invoiceNumber||'—'}</div>
     <div class="tag-line mono">A: ${c.aNumber||'—'} C: ${c.cNumber||'—'}</div>
     <div class="tag-line">Exit: ${c.exitNumber||'—'}</div>
@@ -2123,10 +2508,10 @@ function endToEndHTML(){
   return `
     <div class="topbar"><div><h1>End to End</h1><div class="desc">Every job ever recorded at your terminal, including stepped-down ones. Any department can update stage or step a container down here.</div></div></div>
     <div class="metric-row">
-      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Total jobs, all time</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>!c.steppedDown.status && c.stageIdx<14).length}</div><div class="lbl">Active in pipeline</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.stageIdx>=13 && !c.steppedDown.status).length}</div><div class="lbl">Delivered / returned</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('all')}"><div class="num">${list.length}</div><div class="lbl">Total jobs, all time</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('pipeline')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('pipeline')}"><div class="num">${list.filter(c=>!c.steppedDown.status && c.stageIdx<14).length}</div><div class="lbl">Active in pipeline</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('delivered')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('delivered')}"><div class="num">${list.filter(c=>c.stageIdx>=13 && !c.steppedDown.status).length}</div><div class="lbl">Delivered / returned</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('stepped')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('stepped')}"><div class="num">${list.filter(c=>c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
     </div>
     <div class="panel">
       <div class="panel-head"><h3>All jobs</h3>
@@ -2143,31 +2528,132 @@ function endToEndHTML(){
 
 /* ========================= FINANCIAL RECONCILIATION ========================= */
 function financeHTML(){
-  const list = state.containers.filter(c=>c.terminalId===state.terminalId);
-  const totalDuties = list.reduce((s,c)=>s+c.financial.customsDuties,0);
-  const paidDuties = list.filter(c=>c.financial.dutyStatus==='paid').reduce((s,c)=>s+c.financial.customsDuties,0);
-  const pendingDuties = totalDuties - paidDuties;
-  const totalCharges = list.reduce((s,c)=>s+c.financial.terminalCharges,0);
-  const totalClearing = list.reduce((s,c)=>s+c.financial.clearingExpenses,0);
+  const all = state.containers.filter(c=>c.terminalId===state.terminalId && c.financial && !c.financial.summaryOnly);
+  const flt = state.finFilter||'all', q = (state.finSearch||'').trim().toLowerCase();
+  const list = all.filter(c=>{
+    const p = jobProfitOf(c);
+    if(flt==='profit' && !(p>0)) return false;
+    if(flt==='loss' && !(p<0)) return false;
+    if(flt==='even' && p!==0) return false;
+    if(q && !(`${c.containerNumber} ${c.billOfLading} ${c.owner||''} ${c.agent||''}`.toLowerCase().includes(q))) return false;
+    return true;
+  });
+  const sum = f => list.reduce((s,c)=>s+f(c),0);
+  const rev = sum(c=>Number(c.financial.processingCharge)||0), exp = sum(jobExpensesOf), other = sum(jobOtherOf), net = rev-exp;
+  const dutyOut = sum(c=>c.financial.dutyStatus==='paid'?0:(Number(c.financial.customsDuties)||0));
+  const adding = state.finAdd;
   return `
-    <div class="topbar"><div><h1>Financial Reconciliation</h1><div class="desc">Review and edit the financial breakdown and duty payments across every job at your terminal. Visible to Admin and Accountant only.</div></div></div>
+    <div class="topbar"><div><h1>Financial Reconciliation</h1><div class="desc">Every job at your terminal in one place: what the job brings in (the processing charge written at first entry), what it cost, and whether it made a profit or a loss. Only the Accountant sees this page.</div></div></div>
     <div class="metric-row">
-      <div class="metric"><div class="num">${fmtNaira(paidDuties)}</div><div class="lbl">Duties collected</div></div>
-      <div class="metric"><div class="num">${fmtNaira(pendingDuties)}</div><div class="lbl">Duties outstanding</div></div>
-      <div class="metric"><div class="num">${fmtNaira(totalCharges)}</div><div class="lbl">Total terminal charges</div></div>
-      <div class="metric"><div class="num">${fmtNaira(totalClearing)}</div><div class="lbl">Total clearing expenses</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="scrollHit('fin-rows')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollHit('fin-rows')}"><div class="num">${fmtNaira(rev)}</div><div class="lbl">Processing charges</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="scrollHit('fin-rows')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollHit('fin-rows')}"><div class="num">${fmtNaira(exp)}</div><div class="lbl">Total expenses (incl. other requests)</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="finNetGo(${net})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();finNetGo(${net})}"><div class="num" style="color:${plColor(net)};">${net<0?'−':''}${fmtNaira(Math.abs(net))}</div><div class="lbl">${net<0?'Net loss':'Net profit'}</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="scrollHit('fin-rows')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();scrollHit('fin-rows')}"><div class="num">${fmtNaira(dutyOut)}</div><div class="lbl">Duties outstanding</div></div>
     </div>
-    <div class="panel"><div class="panel-head"><h3>All jobs — tap a row to edit charges, invoices, or record duty payment</h3></div>
-      <div class="panel-body" style="padding:0 18px;">
-        ${list.map(c=>`
-        <div class="job-row" style="grid-template-columns:120px 1fr 1fr 1.2fr 100px;" onclick="openContainer('${c.id}')">
-          <div class="cnum">${c.containerNumber}</div>
-          <div class="tag-line">Charges: ${fmtNaira(c.financial.terminalCharges)}<br>Clearing: ${fmtNaira(c.financial.clearingExpenses)}</div>
-          <div class="tag-line">Duty: ${fmtNaira(c.financial.customsDuties)}</div>
-          <div class="owner">${ownerAgentLabel(c)}</div>
-          <div><span class="pill ${c.financial.dutyStatus==='paid'?'ok':'wait'}">${c.financial.dutyStatus}</span></div>
-        </div>`).join('')}
-      </div></div>`;
+    <div class="panel"><div class="panel-head" style="flex-wrap:wrap;gap:8px;"><h3>Monthly reconciliation <span class="tag-line">(${list.length} job${list.length===1?'':'s'}, newest month first)</span></h3>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <input type="text" id="fin-search" placeholder="Search container, BOL, importer…" value="${jobEsc(state.finSearch||'')}" oninput="state.finSearch=this.value;renderFinRows()" style="min-width:180px;">
+        <select onchange="state.finFilter=this.value;renderTab()"><option value="all" ${flt==='all'?'selected':''}>All jobs</option><option value="profit" ${flt==='profit'?'selected':''}>Profit only</option><option value="loss" ${flt==='loss'?'selected':''}>Loss only</option><option value="even" ${flt==='even'?'selected':''}>Break-even</option></select>
+      </div></div>
+      <div class="panel-body" style="padding:0 18px;" id="fin-rows">${finRowsHTML(list, adding)}</div></div>
+    <div class="panel" id="fin-annual"><div class="panel-head"><h3>Annual summary <span class="tag-line">(delivered jobs, year by year with each month of delivery; paid jobs not yet delivered listed separately)</span></h3></div>
+      <div class="panel-body" id="fin-annual-body">${finAnnualHTML(list)}</div></div>`;
+}
+function finRowsHTML(list, adding){
+  if(!list.length) return '<div class="empty-state">No jobs match.</div>';
+  const groups = {}, dgroups = {};
+  list.forEach(c=>{ const k=monthKey(c); (groups[k]=groups[k]||[]).push(c); const d=deliveredKey(c); if(d) (dgroups[d]=dgroups[d]||[]).push(c); });
+  const keys = Array.from(new Set(Object.keys(groups).concat(Object.keys(dgroups)))).sort().reverse();
+  const sub = t=>`<div class="tag-line" style="margin:10px 0 0;font-weight:600;">${t}</div>`;
+  return keys.map(k=>{
+    const g = (groups[k]||[]).sort((a,b)=>new Date(b.createdAt||0)-new Date(a.createdAt||0)), t = finTotals(g);
+    const dg = (dgroups[k]||[]).sort((a,b)=>new Date(deliveredOn(b))-new Date(deliveredOn(a))), dt = finTotals(dg);
+    return `<div style="background:var(--panel-2,rgba(0,0,0,.05));border-radius:10px;padding:10px 12px;margin:14px 0 2px;"><b>${jobEsc(monthLabel(k))}</b>
+      <div class="tag-line">Registered: ${t.n} job${t.n===1?'':'s'} · Charges <b>${fmtNaira(t.rev)}</b> · Expenses <b>${fmtNaira(t.exp)}</b> · <b style="color:${plColor(t.net)};">${plLabel(t.net)}</b></div>
+      <div class="tag-line">Delivered: ${dt.n} job${dt.n===1?'':'s'} · Charges <b>${fmtNaira(dt.rev)}</b> · Expenses <b>${fmtNaira(dt.exp)}</b> · <b style="color:${plColor(dt.net)};">${plLabel(dt.net)}</b></div></div>`
+      + (g.length ? sub('Registered this month')+g.map(c=>finJobRowHTML(c, adding, 'r')).join('') : '')
+      + (dg.length ? sub('Delivered this month')+dg.map(c=>finJobRowHTML(c, adding, 'd')).join('') : '');
+  }).join('');
+}
+function finJobRowHTML(c, adding, sect){
+  sect = sect||'r';
+  {
+    const p = jobProfitOf(c), others = (c.financial.otherExpenses||[]);
+    return `<div style="border-bottom:1px solid var(--line,#E4E0D2);padding:12px 0;">
+      <div style="display:grid;grid-template-columns:minmax(110px,1fr) repeat(2,minmax(90px,1fr)) minmax(120px,1.2fr) auto;gap:8px;align-items:center;">
+        <div><div class="cnum">${jobEsc(c.containerNumber)}</div><div class="tag-line">${jobEsc(ownerAgentLabel(c))}</div><div class="tag-line">📅 Registered ${fmtDate(c.createdAt)}</div>${deliveredOn(c)?`<div class="tag-line">🚚 Delivered ${fmtDate(deliveredOn(c))}</div>`:''}</div>
+        <div class="tag-line">Processing charge<br><b>${c.financial.processingCharge?fmtNaira(c.financial.processingCharge):'—'}</b></div>
+        <div class="tag-line">Total expenses<br><b>${jobExpensesOf(c)?fmtNaira(jobExpensesOf(c)):'—'}</b></div>
+        <div><span class="pill ${p>0?'ok':(p<0?'stepped':'wait')}">${plLabel(p)}</span></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;"><button class="btn small secondary" onclick="startOtherRequest('${c.id}','${sect}')">+ Other request</button><button class="btn small ghost" onclick="openContainer('${c.id}')">Open job</button></div>
+      </div>
+      ${others.length?`<div class="tag-line" style="margin-top:6px;">Included in the expenses above — other requests: ${others.map(o=>`${jobEsc(o.label)}: ${fmtNaira(o.amount)}`).join(' · ')}</div>`:''}
+      ${(adding===c.id && (state.finAddSect||'r')===sect)?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:flex-end;">
+        <div class="field" style="margin:0;flex:2;min-width:160px;"><label>What was it for?</label><input type="text" id="or-label" maxlength="120" placeholder="e.g. Extra storage, demurrage waiver, police escort"></div>
+        <div class="field" style="margin:0;flex:1;min-width:110px;"><label>Amount (₦)</label><input type="number" id="or-amt" min="0" step="any" placeholder="e.g. 15000" value="" autocomplete="off"></div>
+        <button class="btn small" onclick="addOtherRequest('${c.id}')">Add expense</button><button class="btn small secondary" onclick="cancelOtherRequest()">Cancel</button></div>`:''}
+    </div>`;
+  }
+}
+function renderFinRows(){
+  const el = document.getElementById('fin-rows'); if(!el) return;
+  const flt = state.finFilter||'all', q = (state.finSearch||'').trim().toLowerCase();
+  const list = state.containers.filter(c=>c.terminalId===state.terminalId && c.financial && !c.financial.summaryOnly).filter(c=>{
+    const p = jobProfitOf(c);
+    if(flt==='profit' && !(p>0)) return false; if(flt==='loss' && !(p<0)) return false; if(flt==='even' && p!==0) return false;
+    return !q || `${c.containerNumber} ${c.billOfLading} ${c.owner||''} ${c.agent||''}`.toLowerCase().includes(q);
+  });
+  el.innerHTML = finRowsHTML(list, state.finAdd);
+  const an = document.getElementById('fin-annual-body'); if(an) an.innerHTML = finAnnualHTML(list);
+}
+function startOtherRequest(cid, sect){ state.finAdd = cid; state.finAddSect = sect||'r'; state.editingJob = 'fin'; renderFinRows(); const e=document.getElementById('or-label'); if(e){ e.scrollIntoView({block:'center'}); e.focus(); } }
+function cancelOtherRequest(){ state.finAdd = null; state.editingJob = null; renderFinRows(); }
+async function addOtherRequest(cid){
+  if(checkMasterHold()) return;
+  const c = byId(cid); if(!c || !c.financial || c.financial.summaryOnly || !isFinanceStaff()) return;
+  const label = (document.getElementById('or-label')||{value:''}).value.trim();
+  const amount = Number((document.getElementById('or-amt')||{value:''}).value);
+  if(!label){ toast('Say what the expense was for.'); return; }
+  if(!(amount>0)){ toast('Enter the amount spent.'); return; }
+  c.financial.otherExpenses = c.financial.otherExpenses||[];
+  c.financial.otherExpenses.push({label:label.slice(0,120), amount, by:state.person, date:new Date().toISOString()});
+  state.finAdd = null; state.editingJob = null;
+  if(!(await saveContainers(state.containers))){ c.financial.otherExpenses.pop(); renderTab(); return; }
+  await pushLog(`Other expense added to ${c.containerNumber} by ${state.person}: ${label}`, 'Accountant', c.terminalId);
+  toast(`Added. This job now shows a ${jobProfitOf(c)<0?'loss':'profit'} of ${fmtNaira(Math.abs(jobProfitOf(c)))}.`);
+  renderTab();
+}
+
+/* ---- Delete an invoice the accountant sent by mistake ---- */
+function confirmDeleteInvoice(cid, invId){
+  const c = byId(cid); const inv = c && (c.invoices||[]).find(i=>i.id===invId); if(!inv || !isFinanceStaff()) return;
+  showModalHTML(`<div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">Delete invoice</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div><button class="btn ghost" onclick="openContainer('${cid}')">✕</button></div>
+    <div class="modal-body"><p style="font-size:13.5px;margin-bottom:10px;">Delete this invoice? The importer or agent will no longer see it.</p>
+      <p class="tag-line" style="margin-bottom:14px;">${jobEsc(inv.fileName)} — ${fmtNaira(inv.amount)}</p>
+      <div style="display:flex;gap:8px;"><button class="btn danger" onclick="deleteInvoice('${cid}','${invId}')">Yes, delete</button><button class="btn secondary" onclick="openContainer('${cid}')">Keep it</button></div></div>`);
+}
+async function deleteInvoice(cid, invId){
+  const c = byId(cid); if(!c || !isFinanceStaff()) return;
+  const i = (c.invoices||[]).findIndex(x=>x.id===invId); if(i<0){ openContainer(cid); return; }
+  const inv = c.invoices[i]; c.invoices.splice(i,1);
+  if(!(await saveContainers(state.containers))){ c.invoices.splice(i,0,inv); openContainer(cid); return; }
+  await pushLog(`Invoice deleted from ${c.containerNumber} by ${state.person}: ${inv.fileName}`, 'Accountant', c.terminalId);
+  toast('Invoice deleted.'); openContainer(cid);
+}
+/* ---- Delete a document you uploaded by mistake ---- */
+function confirmDeleteDoc(cid, idx){
+  const c = byId(cid); const d = c && (c.documents||[])[idx]; if(!d || d.uploadedBy!==state.person){ toast('You can only delete documents you uploaded.'); return; }
+  showModalHTML(`<div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">Delete document</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div><button class="btn ghost" onclick="openContainer('${cid}')">✕</button></div>
+    <div class="modal-body"><p style="font-size:13.5px;margin-bottom:10px;">Delete this document? It is removed for everyone on this job.</p>
+      <p class="tag-line" style="margin-bottom:14px;">${jobEsc(d.name)} — ${jobEsc(d.type)}</p>
+      <div style="display:flex;gap:8px;"><button class="btn danger" onclick="deleteDoc('${cid}',${idx})">Yes, delete</button><button class="btn secondary" onclick="openContainer('${cid}')">Keep it</button></div></div>`);
+}
+async function deleteDoc(cid, idx){
+  const c = byId(cid); const d = c && (c.documents||[])[idx]; if(!d || d.uploadedBy!==state.person){ toast('You can only delete documents you uploaded.'); return; }
+  c.documents.splice(idx,1);
+  if(!(await saveContainers(state.containers))){ c.documents.splice(idx,0,d); openContainer(cid); return; }
+  await pushLog(`Document deleted on ${c.containerNumber} by ${state.person}: ${d.type} “${d.name}”`, null, c.terminalId);
+  toast('Document deleted.'); openContainer(cid);
 }
 
 /* ========================= ALERTS ========================= */
@@ -2215,10 +2701,10 @@ function reportsHTML(){
   return `
     <div class="topbar"><div><h1>Performance Reports</h1><div class="desc">${isSCTL()?'Platform-wide metrics across every bonded terminal.':'Terminal-wide metrics to spot bottlenecks and track turnaround.'}</div></div></div>
     <div class="metric-row">
-      <div class="metric"><div class="num">${avgTat}d</div><div class="lbl">Avg. turnaround (delivered jobs)</div></div>
-      <div class="metric"><div class="num">${avgTransire!==null?avgTransire+'d':'—'}</div><div class="lbl">Avg. days to submit transire</div></div>
-      <div class="metric"><div class="num">${avgDelivery!==null?avgDelivery+'d':'—'}</div><div class="lbl">Avg. days to deliver to customer</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="goJobsKind('delivered')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goJobsKind('delivered')}"><div class="num">${avgTat}d</div><div class="lbl">Avg. turnaround (delivered jobs)</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="goJobsKind('delivered')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goJobsKind('delivered')}"><div class="num">${avgTransire!==null?avgTransire+'d':'—'}</div><div class="lbl">Avg. days to submit transire</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="goJobsKind('delivered')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goJobsKind('delivered')}"><div class="num">${avgDelivery!==null?avgDelivery+'d':'—'}</div><div class="lbl">Avg. days to deliver to customer</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="goJobsKind('stepped')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();goJobsKind('stepped')}"><div class="num">${list.filter(c=>c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
     </div>
     <div class="panel"><div class="panel-head"><h3>Bottleneck — jobs currently sitting per stage</h3></div>
       <div class="panel-body">
@@ -2303,7 +2789,7 @@ function staffHTML(){
           <span>Name</span><span>Login</span><span>Department</span><span>Actions</span></div>
         ${staff.map(u=>`
         <div class="staff-row">
-          <span style="display:flex;gap:8px;align-items:center;">${profileAvatarHTML(u,'avatar-sm')}<span>${jobEsc(u.name)}</span></span><span class="mono" style="font-size:11.5px;">${jobEsc(u.login)}</span>
+          <span style="display:flex;gap:8px;align-items:center;">${profileAvatarHTML(u,'avatar-sm')}<span>${jobEsc(u.name)} ${pwReqPill(u)}</span></span><span class="mono" style="font-size:11.5px;">${jobEsc(u.login)}</span>
           <span><select id="dept-${u.id}">${DEPARTMENTS.map(d=>`<option ${d===u.department?'selected':''}>${d}</option>`).join('')}</select></span>
           <span style="display:flex;gap:6px;flex-wrap:wrap;">
             <button class="btn small secondary" onclick="updateStaffDept('${u.id}')">Save</button>
@@ -2381,6 +2867,101 @@ function openAccountDetails(uid){
         ${u.role==='admin' && u.terminalId ? `<button class="btn small secondary" onclick="openStaffPermissions('${u.id}')">Permissions</button>` : ''}
       </div>
     </div>`);
+}
+
+
+/* ---------- SCTL: accounts for terminal Admins and customs officers ---------- */
+function sctlAccountRowHTML(u){
+  const kind = u.role==='customs' ? 'Customs officer' : 'Terminal Admin';
+  const where = u.role==='customs' ? jobEsc(u.org||'Nigeria Customs Service') : jobEsc(terminalName(u.terminalId));
+  return `<div class="staff-row" style="grid-template-columns:1fr auto;align-items:center;">
+    <span><b>${jobEsc(u.name)}</b> ${u.status==='suspended'?'<span class="pill wait">Suspended</span>':''} ${pwReqPill(u)}<div class="tag-line">${kind} · ${where} · <span class="mono">${jobEsc(u.login)}</span></div></span>
+    <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;">
+      <button class="btn small secondary" onclick="openAccountDetails('${u.id}')">Full details</button>
+      <button class="btn small secondary" onclick="openProfile('${u.id}')">Edit</button>
+      <button class="btn small secondary" onclick="adminResetPassword('${u.id}')">Reset password</button>
+      <button class="btn small ${u.status==='suspended'?'':'danger'}" onclick="toggleSuspend('${u.id}')">${u.status==='suspended'?'Reactivate':'Suspend'}</button>
+    </span></div>`;
+}
+function sctlAccountsListHTML(){
+  const q = (state.accSearch||'').trim().toLowerCase();
+  const f = state.accFilter||'all';
+  const list = state.users.filter(u=> ((u.role==='admin'&&u.department==='Admin') || u.role==='customs') && u.status!=='pending_verification')
+    .filter(u=> f==='all' || (f==='admin'&&u.role==='admin') || (f==='customs'&&u.role==='customs'))
+    .filter(u=> !q || `${u.name} ${u.login} ${u.org||''} ${terminalName(u.terminalId)}`.toLowerCase().includes(q));
+  return list.length ? list.map(sctlAccountRowHTML).join('') : '<div class="empty-state" style="padding:20px;">No accounts match.</div>';
+}
+function sctlAccountsFilter(){
+  state.accSearch = (document.getElementById('acc-search')||{}).value||'';
+  state.accFilter = (document.getElementById('acc-filter')||{}).value||'all';
+  const el = document.getElementById('acc-list'); if(el) el.innerHTML = sctlAccountsListHTML();
+}
+function sctlAccountsHTML(){
+  const terms = (state.terminals||[]).filter(t=>t.status==='active');
+  return `
+    <div class="topbar"><div><h1>Accounts</h1><div class="desc">Create and manage the accounts of terminal Admins and customs officers. Open full details, edit, suspend or reactivate an account, or reset a password from here.</div></div></div>
+    ${pwResetPanelHTML()}
+    <div class="panel"><div class="panel-head"><h3>Create an account</h3></div>
+      <div class="panel-body">
+        <p class="hint" style="margin-bottom:10px;">The account is active straight away. You give the person the username and password shown after you create it.</p>
+        <div class="form-grid3">
+          <div class="field"><label>Account type</label><select id="sa-role" onchange="sctlAccTypeChange()"><option value="admin">Terminal Admin</option><option value="customs">Customs officer</option></select></div>
+          <div class="field" id="sa-term-wrap"><label>Bonded terminal</label><select id="sa-term">${terms.map(t=>`<option value="${t.id}">${jobEsc(t.name)}</option>`).join('')}</select></div>
+          <div class="field"><label>Full name</label><input type="text" id="sa-name" placeholder="Full name" autocomplete="off"></div>
+          <div class="field"><label>Username (they sign in with this)</label><input type="text" id="sa-login" placeholder="e.g. name@terminal.com" autocomplete="off" autocapitalize="none"></div>
+          <div class="field"><label>Phone number</label><input type="tel" id="sa-phone" placeholder="080…" autocomplete="off"></div>
+          <div class="field" id="sa-org-wrap" style="display:none;"><label>Office / command</label><input type="text" id="sa-org" value="Nigeria Customs Service" autocomplete="off"></div>
+          <div class="field"><label>Password (at least 6 characters)</label>
+            <div style="display:flex;gap:8px;"><input type="text" id="sa-pass" value="${genClientPassword()}" autocomplete="off" autocapitalize="none" style="font-family:monospace;"><button type="button" class="btn small secondary" onclick="document.getElementById('sa-pass').value=genClientPassword()">New</button></div></div>
+        </div>
+        <button class="btn" onclick="submitSctlAccount()">Create account</button>
+      </div></div>
+    <div class="panel"><div class="panel-head"><h3>Terminal Admins and customs officers</h3>
+      <div class="toolbar"><select id="acc-filter" onchange="sctlAccountsFilter()"><option value="all" ${(state.accFilter||'all')==='all'?'selected':''}>All accounts</option><option value="admin" ${state.accFilter==='admin'?'selected':''}>Terminal Admins</option><option value="customs" ${state.accFilter==='customs'?'selected':''}>Customs officers</option></select>
+      <input type="text" id="acc-search" placeholder="Search name, username, terminal…" value="${jobEsc(state.accSearch||'')}" oninput="sctlAccountsFilter()"></div></div>
+      <div class="panel-body" style="padding:0 18px;" id="acc-list">${sctlAccountsListHTML()}</div></div>`;
+}
+function sctlAccTypeChange(){
+  const r = (document.getElementById('sa-role')||{}).value;
+  const t = document.getElementById('sa-term-wrap'), o = document.getElementById('sa-org-wrap');
+  if(t) t.style.display = r==='customs' ? 'none' : ''; if(o) o.style.display = r==='customs' ? '' : 'none';
+}
+async function submitSctlAccount(){
+  if(!isSCTL()){ toast('Only SCTL can create these accounts.'); return; }
+  const v = id => (document.getElementById(id)||{value:''}).value.trim();
+  const role = v('sa-role')==='customs' ? 'customs' : 'admin';
+  const name = v('sa-name'), login = v('sa-login'), phone = v('sa-phone'), terminalId = v('sa-term');
+  const password = (document.getElementById('sa-pass')||{value:''}).value;
+  if(!name){ toast('Enter their full name.'); return; }
+  if(!login || /\s/.test(login) || login.length<3){ toast('Enter a username of at least 3 characters, with no spaces.'); return; }
+  if(password.length<6){ toast('The password must be at least 6 characters.'); return; }
+  if(role==='admin' && !terminalId){ toast('Choose a bonded terminal for the Admin.'); return; }
+  if(state.users.some(u=>String(u.login||'').toLowerCase()===login.toLowerCase())){ toast('That username is already used. Choose another.'); return; }
+  const newId = 'u'+Date.now();
+  try{ await apiFetch('/api/auth/register', {method:'POST', body: JSON.stringify({id:newId, email:login, password})}); }
+  catch(err){ toast(err && err.status===409 ? 'That username is already used. Choose another.' : ('Could not create the account: '+((err&&err.message)||'server error'))); return; }
+  const user = role==='customs'
+    ? {id:newId, name, login, phone, org: v('sa-org')||'Nigeria Customs Service', role:'customs', department:null, terminalId:null, status:'active', uniqueId:genUniqueId(name), stationedAt:'WACT Office', registeredBy:state.person, registeredDate:new Date().toISOString()}
+    : {id:newId, name, login, phone, org: terminalName(terminalId), role:'admin', department:'Admin', terminalId, status:'active', uniqueId:genUniqueId(name), stationedAt:STATIONS[0], registeredBy:state.person, registeredDate:new Date().toISOString()};
+  state.users.push(user);
+  if(!(await saveUsers(state.users))){ state.users = state.users.filter(u=>u.id!==newId); toast('The account could not be saved. Try again with a different username.'); return; }
+  await pushLog(`${role==='customs'?'Customs officer':'Terminal Admin'} ${name} created by ${state.person}`, null, terminalId||null);
+  const tname = role==='customs' ? 'Customs' : terminalName(terminalId);
+  state.lastClientCreds = 'ConTracker sign-in\nAccount type: '+(role==='customs'?'Customs officer':'Terminal Admin')+(role==='admin'?'\nTerminal: '+tname:'')+'\nName: '+name+'\nUsername: '+login+'\nPassword: '+password;
+  showModalHTML(`
+    <div class="modal-head"><div><h2 style="font-size:18px;">Account created</h2><div class="tag-line">${jobEsc(name)} · ${role==='customs'?'Customs officer':'Terminal Admin'}</div></div>
+      <button class="btn ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <p class="hint" style="margin-bottom:10px;">Give these sign-in details to ${jobEsc(name)}.</p>
+      <div class="bol-card" style="padding:14px;">
+        <div class="kv"><b>Username</b><span class="mono" style="font-size:15px;">${jobEsc(login)}</span></div>
+        <div class="kv"><b>Password</b><span class="mono" style="font-size:15px;">${jobEsc(password)}</span></div>
+      </div>
+      <p class="hint" style="margin:10px 0;">The password is shown only now. If it is lost, use Reset password on the Accounts page.</p>
+      <button class="btn" onclick="copyClientCredentials()">Copy sign-in details</button>
+      <button class="btn secondary" onclick="closeModal()">Done</button>
+    </div>`);
+  if(state.activeTab==='accounts') renderTab();
 }
 
 /* ---------- Terminal Admin registers an importer / agent (when they cannot register themselves) ---------- */
@@ -2691,26 +3272,25 @@ function financeReadRowsHTML(c){
     ['Manifest expenses',c.financial.manifestExpenses],['PAAR expenses',c.financial.paarExpenses],['SON Remita',c.financial.sonRemitaAmount],
     [`Customs duties (${c.financial.dutyStatus})`,c.financial.customsDuties]];
   (c.financial.otherExpenses||[]).forEach(o=>rows.push([o.label, o.amount]));
-  return rows.map(([l,v])=>`<div class="fin-row"><span>${l}</span><span>${fmtNaira(v)}</span></div>`).join('');
+  return rows.map(([l,v])=>`<div class="fin-row"><span>${l}</span><span>${fmtNaira(v)}</span></div>`).join('') + financeProfitHTML(c);
 }
 function financeEditRowsHTML(c){
   const base = [['processingCharge','Processing charge'],['mptRating','MPT RATING'],['shippingRating','Shipping line RATING'],['terminalCharges','Terminal charges'],
     ['clearingExpenses','Clearing expenses'],['transportation','Transportation'],['manifestExpenses','Manifest expenses'],['paarExpenses','PAAR expenses'],
     ['sonRemitaAmount','SON Remita amount']];
   return `
-    ${base.map(([k,l])=>`<div class="fin-edit-row"><label>${l}</label><input type="number" id="fin-${k}" value="${c.financial[k]}"></div>`).join('')}
-    <div class="fin-edit-row"><label>SON Remita reference</label><input type="text" id="fin-sonRemitaRef" value="${c.financial.sonRemitaRef||''}" placeholder="RRR-00000000"></div>
-    <div id="other-expenses-list">${(c.financial.otherExpenses||[]).map((o,i)=>`
-      <div class="fin-edit-row"><input type="text" id="other-label-${i}" value="${o.label}" placeholder="Description"><input type="number" id="other-amt-${i}" value="${o.amount}"></div>`).join('')}</div>
-    <button type="button" class="btn small ghost" style="padding-left:0;" onclick="addOtherExpenseRow('${c.id}')">+ Add other expense</button>
+    ${base.map(([k,l])=>`<div class="fin-edit-row"><label>${l}</label><input type="number" min="0" step="any" id="fin-${k}" value="${c.financial[k]?c.financial[k]:''}" placeholder="Amount (₦)"></div>`).join('')}
+    <div id="other-expenses-list">${(c.financial.otherExpenses||[]).map((o,i)=>otherRowHTML(c.id,o,i)).join('')}</div>
+    <button type="button" class="btn small ghost" style="padding-left:0;" onclick="addOtherExpenseRow('${c.id}')">+ Add other request</button>
     <div class="fin-row" style="border:none;"><span>Customs duties (${c.financial.dutyStatus})</span><span>${fmtNaira(c.financial.customsDuties)}</span></div>
+    ${financeProfitHTML(c)}
     <button class="btn small secondary" style="margin-top:8px;" onclick="saveFinancials('${c.id}')">Save financial breakdown</button>`;
 }
 function addOtherExpenseRow(id){
-  const c = byId(id);
-  c.financial.otherExpenses = c.financial.otherExpenses || [];
-  c.financial.otherExpenses.push({label:'Other', amount:0});
-  openContainer(id);
+  const list = document.getElementById('other-expenses-list'); if(!list) return;
+  state.editingJob = id; /* keep the open form from being refreshed while it is filled in */
+  list.insertAdjacentHTML('beforeend', otherRowHTML(id, {label:'', amount:''}, -1));
+  const t = list.lastElementChild.querySelector('input'); if(t){ t.scrollIntoView({block:'center'}); t.focus(); }
 }
 async function saveFinancials(id){
   if(checkMasterHold()) return;
@@ -2721,15 +3301,11 @@ async function saveFinancials(id){
   });
   const refEl = document.getElementById('fin-sonRemitaRef');
   if(refEl) c.financial.sonRemitaRef = refEl.value.trim() || null;
-  const others = [];
-  (c.financial.otherExpenses||[]).forEach((o,i)=>{
-    const lbl = document.getElementById('other-label-'+i), amt = document.getElementById('other-amt-'+i);
-    if(lbl) others.push({label: lbl.value.trim()||'Other', amount: Number(amt.value)||0});
-  });
-  c.financial.otherExpenses = others;
+  otherFromDom(c);
   if(!(await saveContainers(state.containers))) return;
   await pushLog(`Financial breakdown updated for ${c.containerNumber} by ${state.person}`, 'Accountant', c.terminalId);
   toast('Financial breakdown saved.');
+  state.editingJob = null;
   openContainer(id);
 }
 async function saveTransferLetter(id){
@@ -2853,13 +3429,13 @@ async function saveSealNumber(id, when){
   else c.sealNumberDelivery = val || null;
   if(c.sealNumber && c.sealNumberDelivery){
     c.sealMismatch = c.sealNumber !== c.sealNumberDelivery;
-    if(c.sealMismatch && !c.alerts.some(a=>a.type==='Seal Mismatch' && a.status==='active')){
-      c.alerts.push({id:'a'+Date.now(), type:'Seal Mismatch', desc:`Seal recorded at examination (${c.sealNumber}) does not match the seal recorded at delivery (${c.sealNumberDelivery}).`, status:'active', dateDetected:new Date().toISOString()});
+    if(c.sealMismatch && !c.alerts.some(a=>a.type==='DSS' && a.status==='active')){
+      c.alerts.push({id:'a'+Date.now(), type:'DSS', desc:`Seal recorded at examination (${c.sealNumber}) does not match the seal recorded at delivery (${c.sealNumberDelivery}).`, status:'active', dateDetected:new Date().toISOString()});
     }
   }
   if(!(await saveContainers(state.containers))) return;
   await pushLog(`Seal number (${when}) recorded for ${c.containerNumber} by ${state.person}: ${val}`, 'Operations', c.terminalId);
-  toast(c.sealMismatch ? 'Seal mismatch detected — alert raised.' : 'Seal number saved.');
+  toast(c.sealMismatch ? 'DSS detected — alert raised.' : 'Seal number saved.');
   openContainer(id); renderApp();
 }
 async function savePlacementInstruction(id){
@@ -2883,16 +3459,87 @@ async function saveContainerPlacement(id){
 }
 
 /* ---- Progress notes: replies, staff-only comments, notify the author ---- */
+/* ---- Edit / delete your own comments and messages ---- */
+function ownNote(c,n){ return !!n && n.by===state.person && canAddNote(c); }
+function startNoteEdit(cid,i){
+  const c=byId(cid); const n=c&&c.progressNotes&&c.progressNotes[i]; if(!ownNote(c,n)){ toast('You can only edit your own comments.'); return; }
+  const box=document.getElementById('reply-box-'+i); if(!box) return;
+  state.editingJob = cid;
+  box.innerHTML = `<textarea id="note-edit-text" rows="3" maxlength="2000" style="margin:6px 0;width:100%;">${jobEsc(n.text)}</textarea>
+    <button class="btn small" onclick="saveNoteEdit('${cid}',${i})">Save</button> <button class="btn small secondary" onclick="cancelEditJob('${cid}')">Cancel</button>`;
+  const t=document.getElementById('note-edit-text'); if(t) t.focus();
+}
+async function saveNoteEdit(cid,i){
+  const c=byId(cid); const n=c&&c.progressNotes&&c.progressNotes[i]; if(!ownNote(c,n)){ toast('You can only edit your own comments.'); return; }
+  const text=(document.getElementById('note-edit-text')||{value:''}).value.trim();
+  if(!text){ toast('A comment cannot be empty. Use Delete to remove it.'); return; }
+  if(text===n.text){ state.editingJob=null; openContainer(cid); return; }
+  const old={text:n.text,edited:n.edited,editedAt:n.editedAt};
+  n.text=text; n.edited=true; n.editedAt=new Date().toISOString(); state.editingJob=null;
+  if(!(await saveContainers(state.containers))){ Object.assign(n,old); openContainer(cid); return; }
+  await pushLog(`Comment on ${c.containerNumber} edited by ${state.person}.`, null, c.terminalId);
+  toast('Comment updated.'); openContainer(cid);
+}
+function confirmDeleteNote(cid,i){
+  const c=byId(cid); const n=c&&c.progressNotes&&c.progressNotes[i]; if(!ownNote(c,n)){ toast('You can only delete your own comments.'); return; }
+  showModalHTML(`<div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">Delete comment</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div><button class="btn ghost" onclick="openContainer('${cid}')">✕</button></div>
+    <div class="modal-body"><p style="font-size:13.5px;margin-bottom:10px;">Delete this comment?</p>
+      <p class="tag-line" style="margin-bottom:14px;">“${jobEsc(n.text.length>160?n.text.slice(0,160)+'…':n.text)}”</p>
+      <div style="display:flex;gap:8px;"><button class="btn danger" onclick="deleteNote('${cid}',${i})">Yes, delete</button><button class="btn secondary" onclick="openContainer('${cid}')">Keep it</button></div></div>`);
+}
+async function deleteNote(cid,i){
+  const c=byId(cid); const n=c&&c.progressNotes&&c.progressNotes[i]; if(!ownNote(c,n)){ toast('You can only delete your own comments.'); return; }
+  c.progressNotes.splice(i,1);
+  if(!(await saveContainers(state.containers))){ c.progressNotes.splice(i,0,n); openContainer(cid); return; }
+  await pushLog(`A comment on ${c.containerNumber} was deleted by ${state.person}.`, null, c.terminalId);
+  toast('Comment deleted.'); openContainer(cid);
+}
+function startMsgEdit(id){
+  const m=state.messages.find(x=>x.id===id); if(!m||m.from!==state.person) return;
+  const el=document.getElementById('msg-'+id); if(!el) return;
+  state.editingJob='msg';
+  el.innerHTML=`<div class="msg-meta">${jobEsc(m.from)} · editing</div><textarea id="msg-edit-text" rows="3" maxlength="2000" style="width:100%;margin:4px 0;">${jobEsc(m.text||'')}</textarea>
+    <button class="btn small" onclick="saveMsgEdit('${id}')">Save</button> <button class="btn small secondary" onclick="cancelMsgEdit()">Cancel</button>`;
+  const t=document.getElementById('msg-edit-text'); if(t) t.focus();
+}
+function cancelMsgEdit(){ state.editingJob=null; renderTab(); }
+async function saveMsgEdit(id){
+  const m=state.messages.find(x=>x.id===id); if(!m||m.from!==state.person) return;
+  const text=(document.getElementById('msg-edit-text')||{value:''}).value.trim();
+  if(!text && !m.fileId){ toast('A message cannot be empty. Use Delete to remove it.'); return; }
+  const old={text:m.text,edited:m.edited,editedAt:m.editedAt,mentions:m.mentions};
+  m.text=text; m.edited=true; m.editedAt=new Date().toISOString();
+  if(String(m.channel).startsWith('internal:')) m.mentions=staffNamesForTag().filter(n=>text.includes('@'+n));
+  state.editingJob=null;
+  if(!(await saveMessages())){ Object.assign(m,old); }
+  else toast('Message updated.');
+  renderTab();
+}
+function confirmDeleteMsg(id){
+  const m=state.messages.find(x=>x.id===id); if(!m||m.from!==state.person) return;
+  showModalHTML(`<div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">Delete message</div></div><button class="btn ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body"><p style="font-size:13.5px;margin-bottom:10px;">Delete this message${m.fileId?' and its attached file':''}?</p>
+      <p class="tag-line" style="margin-bottom:14px;">${m.text?'“'+jobEsc(m.text.length>160?m.text.slice(0,160)+'…':m.text)+'”':jobEsc(m.fileName||'')}</p>
+      <div style="display:flex;gap:8px;"><button class="btn danger" onclick="deleteMsg('${id}')">Yes, delete</button><button class="btn secondary" onclick="closeModal()">Keep it</button></div></div>`);
+}
+async function deleteMsg(id){
+  const i=state.messages.findIndex(x=>x.id===id); if(i<0||state.messages[i].from!==state.person){ closeModal(); return; }
+  const m=state.messages[i]; state.messages.splice(i,1);
+  if(!(await saveMessages({deleted:[id]}))){ state.messages.splice(i,0,m); }
+  else toast('Message deleted.');
+  closeModal(); renderTab();
+}
+
 function newNoteId(){ return 'n'+Date.now()+Math.random().toString(16).slice(2,6); }
 function canSeeStaffNotes(){ return (isStaff()||isSCTL()); }
-function canAddNote(c){ return myScopeMatches(c); }
+function canAddNote(c){ return myScopeMatches(c) || ((state.role==='importer'||state.role==='agent'||state.role==='customs') && !!c); } // importers and agents can reply to comments on their own jobs
 function progressNotesHTML(c){
   const all = (c.progressNotes||[]).map((n,i)=>Object.assign({_i:i},n)).filter(n=>!n.staffOnly || canSeeStaffNotes());
   if(!all.length) return '<div class="tag-line">No delay notes recorded.</div>';
   const isTop = n => !n.replyTo || !all.some(p=>p.id===n.replyTo);
   const row = (n, reply) => `<div class="history-row" style="${reply?'margin-left:26px;':''}"><div class="dot"></div><div style="flex:1;min-width:0;">
       <div class="t">${fmtDateTime(n.date)}${n.staffOnly?' <span class="flag">STAFF ONLY</span>':''}${reply?' · reply':''}</div>${jobEsc(n.text)}
-      <div class="tag-line">— ${jobEsc(n.by)}${canAddNote(c)?` · <a href="#" onclick="startNoteReply('${c.id}',${n._i});return false;">Reply</a>`:''}</div>
+      <div class="tag-line">— ${jobEsc(n.by)}${n.edited?' · <i>edited</i>':''}${canAddNote(c)?` · <a href="#" onclick="startNoteReply('${c.id}',${n._i});return false;">Reply</a>`:''}${ownNote(c,n)?` · <a href="#" onclick="startNoteEdit('${c.id}',${n._i});return false;">Edit</a> · <a href="#" style="color:var(--rust);" onclick="confirmDeleteNote('${c.id}',${n._i});return false;">Delete</a>`:''}</div>
       <div id="reply-box-${n._i}"></div></div></div>`;
   return all.filter(isTop).reverse().map(n=> row(n,false) + all.filter(r=>r.replyTo && r.replyTo===n.id).map(r=>row(r,true)).join('')).join('');
 }
@@ -2927,13 +3574,13 @@ async function sendNoteReply(cid, i){
 async function addProgressNote(id){
   const c = byId(id);
   const text = document.getElementById('progress-note').value.trim();
-  if(!text){ toast('Enter a comment explaining the delay first.'); return; }
+  if(!text){ toast((state.role==='importer'||state.role==='agent'||state.role==='customs')?'Type your comment first.':'Enter a comment explaining the delay first.'); return; }
   if(!c.progressNotes) c.progressNotes = [];
   const so = document.getElementById('progress-staffonly');
   c.progressNotes.push({id:newNoteId(), text, by:state.person, date:new Date().toISOString(), staffOnly: !!(so && so.checked)});
   if(!(await saveContainers(state.containers))) return;
   await pushLog(`Progress note on ${c.containerNumber} by ${state.person}: ${text}`, null, c.terminalId);
-  toast('Comment added.');
+  toast((state.role==='importer'||state.role==='agent'||state.role==='customs')?'Comment added. The terminal staff will see it.':'Comment added.');
   openContainer(id);
 }
 function showStepDownForm(id){
@@ -2972,12 +3619,13 @@ async function recordDutyPayment(id){
   const ref = document.getElementById('duty-ref').value.trim();
   if(!ref){ toast('Enter a payment reference.'); return; }
   c.financial.customsDuties = dutyAmount;
+  const wasPaid = c.financial.dutyStatus==='paid';
   c.financial.dutyStatus = 'paid';
   c.financial.dutyPaymentRef = ref;
-  c.financial.dutyPaymentDate = new Date().toISOString();
+  if(!wasPaid || !c.financial.dutyPaymentDate) c.financial.dutyPaymentDate = new Date().toISOString();
   if(!(await saveContainers(state.containers))) return;
-  await pushLog(`Duty payment recorded for ${c.containerNumber}: ${fmtNaira(dutyAmount)} (Ref ${ref}) by ${state.person}`, 'Accountant', c.terminalId);
-  toast('Duty payment recorded.');
+  await pushLog(`Duty payment recorded for ${c.containerNumber}: ${fmtNaira(dutyAmount)} (Ref ${ref}) by ${state.person}${wasPaid?' (corrected)':''}`, 'Accountant', c.terminalId);
+  toast(wasPaid?'Duty payment updated.':'Duty payment recorded.');
   openContainer(id);
 }
 async function uploadInvoice(id){
@@ -3102,6 +3750,7 @@ async function saveReturnDates(id){
 
 function openContainer(id){
   const c = byId(id);
+  try{ markNotesSeen(c); hideNotePopupFor(id); }catch(e){}
   const canEdit = myScopeMatches(c);
   const dept = state.department;
   const stage = STAGES[c.stageIdx];
@@ -3116,13 +3765,16 @@ function openContainer(id){
   const isImporterAgentOwner = (state.role==='importer' && c.owner===state.person) || (state.role==='agent' && c.agent===state.person);
   const canStepDown = canEdit && can('stepDown');
   const canForce = canEdit && (isSCTL() || dept==='Admin' || allowedStagesFor(dept).length>=STAGES.length);
-  const canFinEdit = canEdit && !isSCTL() && can('finance');
-  const finHide = isSCTL(); /* the accounts department's figures stay inside each bonded terminal */
+  const canFinEdit = canEdit && !isSCTL() && isFinanceStaff();
+  const fullFin = isFinanceStaff(); /* only the Accountant sees the reconciliation, even as one total */
+  const finHide = !fullFin;
+  const invHide = isSCTL() || isCustoms() || (isStaff() && !can('finance'));
 
   const html = `
     <div class="modal-head">
       <div>
-        <div class="tag-line mono" style="margin-bottom:4px;">${c.billOfLading} · ${c.size} · ${c.item} · ${terminalName(c.terminalId)}</div>
+        <div class="tag-line mono" style="margin-bottom:4px;">${c.billOfLading} · ${c.size} · ${c.item} · ${terminalName(c.terminalId)}${(c.eta||c.arrivedDate)?' · '+etaHTML(c):''}</div>
+        ${arrivalButtonHTML(c)}
         <h2 class="mono" style="font-size:22px;">${c.containerNumber}</h2>
         <div class="tag-line">${ownerAgentLabel(c)} &nbsp;·&nbsp; Destination: ${c.destination}</div>
       </div>
@@ -3148,6 +3800,9 @@ function openContainer(id){
           : `<span class="mono">${c.invoiceNumber||'—'}</span>`}</span></div>
       <div class="kv"><b>A-Number</b><span class="mono">${c.aNumber||'—'}</span></div>
       <div class="kv"><b>C-Number</b><span class="mono">${c.cNumber||'—'}</span></div>
+      <div class="kv"><b>SON Remita reference</b><span>
+        ${(canEdit && can('bol'))?`<span style="display:flex; gap:6px;"><input type="text" id="son-remita-ref" value="${jobEsc(sonRemitaRefOf(c)||'')}" placeholder="RRR-00000000" style="max-width:220px;"><button class="btn small secondary" onclick="saveSonRemitaRef('${c.id}')">Save</button></span>`
+          : `<span class="mono">${jobEsc(sonRemitaRefOf(c))||'—'}</span>`}</span></div>
       <div class="kv"><b>Exit number</b><span>
         ${canEditExitNumber(c) ?`<span style="display:flex; gap:6px;"><input type="text" id="exit-number" placeholder="e.g. X 1776" value="${jobEsc(c.exitNumber||'')}" onblur="var n=normalizeExit(this.value); if(n) this.value=n;" style="max-width:220px;"><button class="btn small secondary" onclick="saveExitNumber('${c.id}')">Save</button></span>`
           : `<span class="mono">${jobEsc(c.exitNumber)||'—'}</span>`}</span></div>
@@ -3226,7 +3881,7 @@ function openContainer(id){
       ${(c.stageIdx>=12 && canEdit && (dept==='Transport'||dept==='Operations'||dept==='Admin')) ? `
       <div class="section-title">Seal number (delivery)</div>
       <div style="display:flex; gap:8px;"><input type="text" id="seal-delivery" value="${c.sealNumberDelivery||''}" placeholder="Seal number confirmed at delivery"><button class="btn small secondary" onclick="saveSealNumber('${c.id}','delivery')">Save</button></div>
-      ${c.sealMismatch?`<div class="hint" style="color:var(--rust); font-weight:600;">⚠ Seal mismatch — this container may have been tampered with.</div>`:''}` : ''}
+      ${c.sealMismatch?`<div class="hint" style="color:var(--rust); font-weight:600;">⚠ DSS — this container may have been tampered with.</div>`:''}` : ''}
 
       ${(canEdit && (dept==='Operations'||dept==='Admin')) ? `
       <div class="section-title">Container placement</div>
@@ -3270,7 +3925,9 @@ function openContainer(id){
 
       <div class="section-title">Progress notes</div>
       ${progressNotesHTML(c)}
-      ${canEdit?`
+      ${(state.role==='importer'||state.role==='agent'||state.role==='customs') ? `
+        <textarea id="progress-note" rows="2" placeholder="Write a comment on this job's progress…" style="margin:8px 0;"></textarea>
+        <button class="btn small secondary" onclick="addProgressNote('${c.id}')">Add comment</button>` : canEdit?`
         <textarea id="progress-note" rows="2" placeholder="Explain a delay — e.g. transfer letter still with CPC, transire awaiting signature…" style="margin:8px 0;"></textarea>
         ${canSeeStaffNotes()?'<label class="tag-line" style="display:block;margin-bottom:8px;"><input type="checkbox" id="progress-staffonly"> Staff only — hide from the importer and agent</label>':''}<button class="btn small secondary" onclick="addProgressNote('${c.id}')">Add comment</button>`:''}
 
@@ -3284,13 +3941,14 @@ function openContainer(id){
           ${documentsSectionHTML(c, {staff: !!canEdit, client: !!isImporterAgentOwner})}
 
 
-          ${finHide?'':'<div class="section-title">Invoices</div>'}
-          ${finHide?'':(c.invoices||[]).map(inv=>`<div class="doc-row"><span>🧾 ${inv.fileName} — ${fmtNaira(inv.amount)}
+          ${invHide?'':'<div class="section-title">Invoices</div>'}
+          ${invHide?'':(c.invoices||[]).map(inv=>`<div class="doc-row"><span>🧾 ${inv.fileName} — ${fmtNaira(inv.amount)}
               <span class="pill ${inv.status==='approved'?'ok':(inv.status==='rejected'?'stepped':'wait')}" style="margin-left:6px;">${inv.status}</span>
               <span class="pill ${inv.paymentStatus==='paid'?'ok':'wait'}" style="margin-left:4px;">${inv.paymentStatus}</span></span>
             <span style="display:flex; gap:6px; align-items:center;">
               ${invoiceFileButtonHTML(c, inv, 'ghost')}
               ${(isImporterAgentOwner)?'':(canEdit && !isSCTL() && dept==='Admin' && inv.status==='pending' ? `<button class="btn small secondary" onclick="reviewInvoice('${c.id}','${inv.id}','approved')">Approve</button><button class="btn small danger" onclick="reviewInvoice('${c.id}','${inv.id}','rejected')">Reject</button>` : '')}
+              ${canFinEdit?`<button class="btn small danger" onclick="confirmDeleteInvoice('${c.id}','${inv.id}')">Delete</button>`:''}
               ${(canFinEdit && inv.status==='approved')?`<button class="btn small ghost" onclick="toggleInvoicePayment('${c.id}','${inv.id}')">${inv.paymentStatus==='paid'?'Mark unpaid':'Mark paid'}</button>`:''}
             </span></div>`).join('') || '<div class="tag-line">No invoices uploaded yet.</div>'}
           ${(canFinEdit)?`
@@ -3301,19 +3959,17 @@ function openContainer(id){
             </div>`:''}
         </div>
         <div>
-          ${finHide?'':'<div class="section-title">Financial breakdown</div>'}
-          ${finHide?'':(canFinEdit ? financeEditRowsHTML(c) : financeReadRowsHTML(c))}
-          ${finHide?'':`<div class="fin-row" style="font-weight:700; border-top:2px solid var(--ink);"><span>Total</span><span>${fmtNaira(financialTotal)}</span></div>`}
+          ${isCustoms()?'':(fullFin?'<div class="section-title">Financial reconciliation</div>':'<div class="section-title">Processing charge</div>')}
+          ${isCustoms()?'':(fullFin?(canFinEdit ? financeEditRowsHTML(c) : financeReadRowsHTML(c)) : `<div class="fin-row" style="font-weight:700;"><span>Processing charge</span><span>${fmtNaira(financialTotalOf(c,0))}</span></div>`)}
 
           ${canFinEdit ? `
           <div class="section-title">Duty payment</div>
-          ${c.financial.dutyStatus==='paid' ? `
-            <div class="tag-line">Paid on ${fmtDate(c.financial.dutyPaymentDate)} · Ref: <span class="mono">${c.financial.dutyPaymentRef}</span></div>` : `
+          ${c.financial.dutyStatus==='paid' ? `<div class="tag-line">Paid on ${fmtDate(c.financial.dutyPaymentDate)} · Ref: <span class="mono">${jobEsc(c.financial.dutyPaymentRef||'')}</span>. If something is wrong, correct it below and save again.</div>` : ''}
             <div class="form-grid">
               <div class="field" style="margin-bottom:6px;"><label>Duty amount (₦)</label><input type="number" id="duty-amount" value="${c.financial.customsDuties||0}"></div>
-              <div class="field" style="margin-bottom:6px;"><label>Payment reference</label><input type="text" id="duty-ref" placeholder="RCPT-00000"></div>
+              <div class="field" style="margin-bottom:6px;"><label>Payment reference</label><input type="text" id="duty-ref" value="${jobEsc(c.financial.dutyPaymentRef||'')}" placeholder="RCPT-00000"></div>
             </div>
-            <button class="btn small" onclick="recordDutyPayment('${c.id}')">Record duty payment</button>`}` : ''}
+            <button class="btn small" onclick="recordDutyPayment('${c.id}')">${c.financial.dutyStatus==='paid'?'Update duty payment':'Record duty payment'}</button>` : ''}
 
           ${canEdit && can('alert')?`
           <div class="section-title">Raise alert</div>
@@ -3335,7 +3991,7 @@ function canDeleteJob(c){ return (isTerminalAdmin() && c.terminalId===state.term
 function jobEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function jobActionButtons(c){
   let h = '';
-  if(c.archived){ if(canArchiveJob(c)) h += `<button class="btn small secondary" onclick="restoreJob('${c.id}')">↩ Restore job</button>`; h += deleteButtonsHTML(c); return h; }
+  if(c.archived){ if(canArchiveJob(c)) h += `<button class="btn small secondary" onclick="restoreJob('${c.id}')">↩ Restore job</button>`; h += archiveDeleteButtons(c); return h; }
   if(canEditJob(c)) h += `<button class="btn small secondary" onclick="openEditJob('${c.id}')">✎ Edit job</button>`;
   if(canArchiveJob(c)) h += `<button class="btn small secondary" onclick="confirmArchiveJob('${c.id}')">🗄 Archive job</button>`;
   return h;
@@ -3346,7 +4002,7 @@ function showModalHTML(html){
 }
 const EDIT_FIELDS = [
   ['containerNumber','Container number'], ['billOfLading','Bill of Lading'], ['size','Container size'],
-  ['item','Cargo description'], ['destination','Destination'],
+  ['item','Cargo description'], ['destination','Destination'], ['eta','ETA (arrival date)'],
   ['owner','Importer'], ['agent','Clearing agent']
 ];
 function openEditJob(id, draft){
@@ -3354,7 +4010,7 @@ function openEditJob(id, draft){
   if(!canEditJob(c)){ toast('You do not have permission to edit this job.'); return; }
   if(checkMasterHold()) return;
   state.editingJob = id; state.openContainerId = id;
-  const v = draft || {containerNumber:c.containerNumber, billOfLading:c.billOfLading, size:c.size, item:c.item, destination:c.destination, owner:c.owner||'', agent:c.agent||''};
+  const v = draft || {containerNumber:c.containerNumber, billOfLading:c.billOfLading, size:c.size, item:c.item, destination:c.destination, owner:c.owner||'', agent:c.agent||'', eta:c.eta||''};
   const people = (role, cur) => {   // the terminal's active importers / agents, plus the current one if they are no longer listed
     const l = state.users.filter(u=>u.role===role && u.terminalId===c.terminalId && u.status==='active').map(u=>({name:u.name, label:u.name+(u.org?' — '+u.org:'')}));
     if(cur && !l.some(p=>p.name===cur)) l.push({name:cur, label:cur});
@@ -3372,6 +4028,7 @@ function openEditJob(id, draft){
         <div class="field"><label>Container size *</label><select id="ej-size"><option value="20ft" ${v.size==='20ft'?'selected':''}>20ft</option><option value="40ft" ${v.size==='40ft'?'selected':''}>40ft</option></select></div>
         <div class="field"><label>Cargo description</label><input id="ej-item" value="${jobEsc(v.item)}"></div>
         <div class="field"><label>Destination</label><input id="ej-dest" value="${jobEsc(v.destination)}"></div>
+        <div class="field"><label>ETA (Estimated Time of Arrival)</label><input type="date" id="ej-eta" value="${jobEsc(v.eta||'')}"></div>
         <div class="field"><label>Importer name (owner of the job)</label><input id="ej-owner" list="ej-owner-list" value="${jobEsc(v.owner)}" placeholder="Leave empty for an agent-sourced job" autocomplete="off"><datalist id="ej-owner-list">${nameHints(people('importer', v.owner))}</datalist></div>
         <div class="field"><label>Clearing agent name</label><input id="ej-agent" list="ej-agent-list" value="${jobEsc(v.agent)}" placeholder="Leave empty if there is no agent" autocomplete="off"><datalist id="ej-agent-list">${nameHints(people('agent', v.agent))}</datalist></div>
         <div style="display:flex;gap:8px;margin-top:14px;"><button class="btn" type="submit">Review changes</button>
@@ -3380,10 +4037,56 @@ function openEditJob(id, draft){
     </div>`);
 }
 function cancelEditJob(id){ state.editingJob = null; if(byId(id)) openContainer(id); else closeModal(); }
+function arrivalButtonHTML(c){
+  if(!canEditJob(c)) return '';
+  return c.arrivedDate
+    ? `<div class="tag-line" style="margin-bottom:6px;">🚢 Vessel arrived ${fmtDate(c.arrivedDate)}${c.arrivedBy?' · recorded by '+jobEsc(c.arrivedBy):''} <a href="#" onclick="undoVesselArrived('${c.id}');return false;">Undo</a></div>`
+    : `<button class="btn small secondary" style="margin-bottom:8px;" onclick="openVesselArrived('${c.id}')">🚢 Vessel arrived</button>`;
+}
+function openVesselArrived(id){
+  const c = byId(id); if(!c || !canEditJob(c)) return;
+  const today = new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,10);
+  showModalHTML(`
+    <div class="modal-head"><div><div class="tag-line">Vessel arrived</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
+      <button class="btn ghost" onclick="openContainer('${id}')">✕</button></div>
+    <div class="modal-body">
+      ${c.eta?`<p class="tag-line" style="margin-bottom:10px;">Expected (ETA): ${fmtDate(c.eta)}</p>`:''}
+      <div class="field"><label>Date the vessel arrived</label><input type="date" id="va-date" value="${today}" max="${today}"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;"><button class="btn" onclick="confirmVesselArrived('${id}')">Record arrival</button>
+        <button class="btn secondary" onclick="openContainer('${id}')">Cancel</button></div>
+    </div>`);
+}
+async function confirmVesselArrived(id){
+  const c = byId(id); if(!c || !canEditJob(c)) return;
+  if(checkMasterHold()) return;
+  const d = (document.getElementById('va-date')||{}).value;
+  if(!d){ toast('Choose the arrival date.'); return; }
+  const before = {arrivedDate:c.arrivedDate||null, arrivedBy:c.arrivedBy||null};
+  c.arrivedDate = d; c.arrivedBy = state.person;
+  if(!(await saveContainers(state.containers))){ Object.assign(c, before); openContainer(id); return; }
+  await pushLog(`Vessel arrival recorded for ${c.containerNumber}: ${fmtDate(d)}${c.eta?' (ETA was '+fmtDate(c.eta)+')':''} — by ${state.person}.`, 'Admin', c.terminalId);
+  toast('Vessel arrival recorded.');
+  openContainer(id);
+}
+async function undoVesselArrived(id){
+  const c = byId(id); if(!c || !canEditJob(c)) return;
+  if(checkMasterHold()) return;
+  const before = {arrivedDate:c.arrivedDate, arrivedBy:c.arrivedBy};
+  c.arrivedDate = null; c.arrivedBy = null;
+  if(!(await saveContainers(state.containers))){ Object.assign(c, before); openContainer(id); return; }
+  await pushLog(`Vessel arrival cleared on ${c.containerNumber} by ${state.person}.`, 'Admin', c.terminalId);
+  openContainer(id);
+}
+function etaHTML(c){
+  if(c.arrivedDate) return `Vessel arrived ${fmtDate(c.arrivedDate)}`+(c.eta?` (ETA ${fmtDate(c.eta)})`:'');
+  if(!c.eta) return '';
+  const late = c.stageIdx<13 && new Date(c.eta+'T23:59:59') < new Date();
+  return `ETA ${fmtDate(c.eta)}${late?' <span style="color:#B3261E;font-weight:600;">(ETA passed)</span>':''}`;
+}
 function readEditDraft(){
   return { containerNumber:document.getElementById('ej-cnum').value.trim().toUpperCase(), billOfLading:document.getElementById('ej-bol').value.trim(),
     size:document.getElementById('ej-size').value, item:document.getElementById('ej-item').value.trim() || 'Unspecified cargo',
-    destination:document.getElementById('ej-dest').value.trim() || 'Not specified',
+    destination:document.getElementById('ej-dest').value.trim() || 'Not specified', eta:document.getElementById('ej-eta').value,
     owner:document.getElementById('ej-owner').value.trim().slice(0,120), agent:document.getElementById('ej-agent').value.trim().slice(0,120) };
 }
 function reviewEditJob(e, id){
@@ -3425,92 +4128,202 @@ async function confirmEditJob(id){
   toast('Job information updated.');
   openContainer(id);
 }
-/* Deleting happens only from the Archive. The terminal's Admin deletes directly; any other staff member who can see the
-   Archive asks for it, and the Admin approves (which deletes) or declines. */
-function canRequestDelete(c){ return isStaff() && c.terminalId===state.terminalId && can('archiveView') && !canDeleteJob(c); }
-function deleteButtonsHTML(c){
-  const r = c.deleteRequest;
+/* ---- Deleting from the Archive: Admin deletes (that is the approval); anyone else asks, and the Admin approves ---- */
+function canRequestArchiveDelete(c){ return isStaff() && c.terminalId===state.terminalId && !canDeleteJob(c) && can('archiveView'); }
+function archiveDeleteButtons(c){
+  if(!c.archived) return '';
   if(canDeleteJob(c)){
-    if(r) return `<button class="btn small danger" onclick="confirmDeleteJob('${c.id}')">🗑 Approve &amp; delete</button><button class="btn small secondary" onclick="declineDeleteRequest('${c.id}')">Decline request</button>`;
-    return `<button class="btn small danger" onclick="confirmDeleteJob('${c.id}')">🗑 Delete job</button>`;
+    return c.deleteRequest
+      ? `<button class="btn small danger" onclick="confirmDeleteArchived('${c.id}')">Approve deletion</button><button class="btn small secondary" onclick="declineArchiveDelete('${c.id}')">Decline</button>`
+      : `<button class="btn small danger" onclick="confirmDeleteArchived('${c.id}')">Delete</button>`;
   }
-  if(canRequestDelete(c)){
-    if(r) return r.by===state.person ? `<button class="btn small secondary" onclick="declineDeleteRequest('${c.id}')">Withdraw deletion request</button>` : '';
-    return `<button class="btn small danger" onclick="openRequestDelete('${c.id}')">🗑 Request deletion</button>`;
+  if(canRequestArchiveDelete(c)){
+    return c.deleteRequest
+      ? `<span class="pill wait" title="Requested by ${jobEsc(c.deleteRequest.by)}">Deletion awaiting Admin approval</span>`
+      : `<button class="btn small danger" onclick="confirmRequestArchiveDelete('${c.id}')">Request deletion</button>`;
   }
   return '';
 }
-function archivedJob(id){ return (state.archived||[]).find(x=>x.id===id); }
-function confirmDeleteJob(id){
-  const c = archivedJob(id); if(!c){ toast('Only archived jobs can be deleted. Archive the job first.'); return; }
-  if(!canDeleteJob(c)){ toast("Only your terminal's Admin can delete a job. Use Request deletion instead."); return; }
-  if(checkMasterHold()) return;
-  const r = c.deleteRequest;
+function confirmRequestArchiveDelete(id){
+  const c = (state.archived||[]).find(x=>x.id===id); if(!c) return;
+  if(!canRequestArchiveDelete(c)){ toast('You cannot request deletion of this job.'); return; }
   showModalHTML(`
-    <div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">Delete job</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
+    <div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">Request deletion</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
       <button class="btn ghost" onclick="closeModal()">✕</button></div>
     <div class="modal-body">
+      <p style="font-size:13.5px;margin-bottom:10px;">Deleting an archived job removes it for good, so your terminal's Admin has to approve it. Nothing is deleted until the Admin approves.</p>
+      <div class="field"><label>Reason (optional)</label><input type="text" id="del-req-reason" maxlength="200" placeholder="e.g. Registered twice by mistake"></div>
+      <div style="display:flex;gap:8px;"><button class="btn danger" onclick="requestArchiveDelete('${id}')">Send request to Admin</button>
+        <button class="btn secondary" onclick="closeModal()">Cancel</button></div>
+    </div>`);
+}
+async function requestArchiveDelete(id){
+  const c = (state.archived||[]).find(x=>x.id===id); if(!c) return;
+  if(!canRequestArchiveDelete(c)){ toast('You cannot request deletion of this job.'); return; }
+  const reasonEl = document.getElementById('del-req-reason');
+  const reason = reasonEl ? reasonEl.value.trim().slice(0,200) : '';
+  const old = c.deleteRequest;
+  c.deleteRequest = { by: state.person, byId: state.userId, date: new Date().toISOString(), reason: reason };
+  const ok = await saveContainers(state.containers);
+  if(!ok){ c.deleteRequest = old; closeModal(); renderApp(); return; }
+  await pushLog(`Deletion requested for archived job ${c.containerNumber} (${c.billOfLading}) by ${state.person}${reason?'. Reason: '+reason:''}. Waiting for Admin approval.`, 'Admin', c.terminalId);
+  toast('Request sent. The Admin will see it in the Archive.');
+  closeModal(); renderApp();
+}
+async function declineArchiveDelete(id){
+  const c = (state.archived||[]).find(x=>x.id===id); if(!c) return;
+  if(!canDeleteJob(c)){ toast('Only the Admin can decline a deletion request.'); return; }
+  const old = c.deleteRequest; c.deleteRequest = null;
+  const ok = await saveContainers(state.containers);
+  if(!ok){ c.deleteRequest = old; renderApp(); return; }
+  await pushLog(`Deletion request for archived job ${c.containerNumber} declined by ${state.person}.`, null, c.terminalId);
+  toast('Request declined. The job stays in the Archive.');
+  closeModal(); renderApp();
+}
+function confirmDeleteArchived(id){
+  const c = (state.archived||[]).find(x=>x.id===id); if(!c) return;
+  if(!canDeleteJob(c)){ toast('Only the Admin can delete a job from the Archive.'); return; }
+  if(checkMasterHold()) return;
+  const rq = c.deleteRequest;
+  showModalHTML(`
+    <div class="modal-head"><div><div class="tag-line" style="color:var(--rust);">${rq?'Approve deletion':'Delete from the Archive'}</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
+      <button class="btn ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      ${rq?`<p class="tag-line" style="margin-bottom:8px;">Requested by <b>${jobEsc(rq.by)}</b> on ${fmtDate(rq.date)}${rq.reason?' — '+jobEsc(rq.reason):''}</p>`:''}
       <p style="font-size:14px;margin-bottom:8px;"><b>Delete this archived job permanently?</b></p>
       <p class="tag-line" style="margin-bottom:6px;">${jobEsc(c.billOfLading)} · ${jobEsc(c.size)} · ${jobEsc(c.item)}</p>
-      ${r ? `<p style="font-size:13px;margin-bottom:8px;">Deletion requested by <b>${jobEsc(r.by)}</b>${r.reason?': '+jobEsc(r.reason):''}.</p>` : ''}
-      <p style="font-size:13px;margin-bottom:10px;">Everything recorded on it (history, documents, charges, alerts) is removed for good. This cannot be undone. If you may want it back, use <b>Restore</b> instead.</p>
-      <div class="field"><label>Type the container number to confirm</label><input id="dj-confirm" autocomplete="off" placeholder="${jobEsc(c.containerNumber)}"></div>
-      <div style="display:flex;gap:8px;margin-top:12px;"><button class="btn danger" onclick="deleteJob('${id}')">Yes, delete permanently</button>
+      <p style="font-size:13px;margin-bottom:14px;">Everything recorded on it goes with it and this cannot be undone. If you may need it later, leave it in the Archive.</p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn danger" onclick="deleteArchivedJob('${id}')">Yes, delete permanently</button>
         <button class="btn secondary" onclick="closeModal()">No, keep it</button></div>
     </div>`);
 }
-async function deleteJob(id){
+async function deleteArchivedJob(id){
   const arch = state.archived||[];
   const c = arch.find(x=>x.id===id);
   if(!c){ toast('This job was already removed.'); closeModal(); renderApp(); return; }
-  if(!canDeleteJob(c)){ toast("Only your terminal's Admin can delete a job."); return; }
-  const typed = ((document.getElementById('dj-confirm')||{}).value||'').trim().toUpperCase();
-  if(typed !== String(c.containerNumber).trim().toUpperCase()){ toast('Type the container number exactly to confirm.'); return; }
+  if(!canDeleteJob(c)){ toast('Only the Admin can delete a job from the Archive.'); return; }
   if(checkMasterHold()) return;
   const backupArch = arch.slice();
   state.archived = arch.filter(x=>x.id!==id);
   const ok = await saveContainers(state.containers, {deleted:[id]});
   if(!ok){ state.archived = backupArch; closeModal(); renderApp(); return; }
-  await pushLog(`Job deleted from the archive: ${c.containerNumber} (${c.billOfLading}) — by ${state.person}${c.deleteRequest?' (requested by '+c.deleteRequest.by+')':''}.`, 'Admin');
+  await pushLog(`Archived job deleted: ${c.containerNumber} (${c.billOfLading}) — by ${state.person}${c.deleteRequest?', approving the request from '+c.deleteRequest.by:''}.`, 'Admin', c.terminalId);
   toast(`Job ${c.containerNumber} deleted.`);
   closeModal(); renderApp();
 }
-function openRequestDelete(id){
-  const c = archivedJob(id); if(!c) return;
-  if(!canRequestDelete(c)){ toast('You cannot request deletion of this job.'); return; }
-  showModalHTML(`
-    <div class="modal-head"><div><div class="tag-line">Request deletion</div><h2 class="mono" style="font-size:20px;">${jobEsc(c.containerNumber)}</h2></div>
-      <button class="btn ghost" onclick="closeModal()">✕</button></div>
-    <div class="modal-body">
-      <p style="font-size:13px;margin-bottom:10px;">Your terminal's Admin has to approve this before the job is deleted. Until then nothing changes.</p>
-      <div class="field"><label>Reason</label><input id="rd-reason" maxlength="300" placeholder="e.g. Registered twice by mistake"></div>
-      <div style="display:flex;gap:8px;margin-top:12px;"><button class="btn danger" onclick="requestDelete('${id}')">Send request</button>
-        <button class="btn secondary" onclick="closeModal()">Cancel</button></div>
-    </div>`);
+/* ---- Dashboard counters: tap one to see those jobs ---- */
+
+/* ---------- Clickable dashboard tiles: take the person to what the number refers to ---------- */
+function mTile(go){ return `class="metric metric-link" role="button" tabindex="0" onclick="${go}" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();${go}}"`; }
+function scrollHit(id){
+  const el = document.getElementById(id); if(!el) return;
+  el.scrollIntoView({behavior:'smooth', block:'start'});
+  el.classList.remove('dash-hit'); void el.offsetWidth; el.classList.add('dash-hit');
 }
-async function requestDelete(id){
-  const c = archivedJob(id); if(!c) return;
-  if(!canRequestDelete(c)){ toast('You cannot request deletion of this job.'); return; }
-  const reason = (((document.getElementById('rd-reason')||{}).value)||'').trim().slice(0,300);
-  if(!reason){ toast('Please give a reason.'); return; }
-  c.deleteRequest = { by: state.person, date: new Date().toISOString(), reason };
-  const ok = await saveContainers(state.containers);
-  if(!ok){ c.deleteRequest = null; closeModal(); renderApp(); return; }
-  await pushLog(`Deletion requested for archived job ${c.containerNumber} (${c.billOfLading}) — by ${state.person}. Reason: ${reason}`, 'Admin');
-  toast('Request sent to your terminal\'s Admin.');
-  closeModal(); renderApp();
+function listFilter(kind){
+  const root = document.getElementById('job-list'); if(!root) return;
+  const q = document.getElementById('job-search'); if(q) q.value='';
+  root.querySelectorAll('.job-row').forEach(r=>{
+    const sg = r.dataset.stagegroup, st = Number(r.dataset.stage||0), stepped = sg==='stepped';
+    let show = kind==='all'
+      || (kind==='alerts' && r.dataset.alert==='1')
+      || (kind==='dup' && r.dataset.dup==='1')
+      || (kind==='stepped' && stepped)
+      || (kind==='delivered' && st>=13 && !stepped)
+      || (kind==='progress' && st<13 && !stepped)
+      || (kind==='pipeline' && st<14 && !stepped)
+      || ((kind==='cpc'||kind==='terminal') && sg===kind)
+      || (kind.indexOf('code:')===0 && STAGES[st] && STAGES[st].code===kind.slice(5));
+    r.style.display = show ? '' : 'none';
+    if(show && kind!=='all'){ r.classList.remove('dash-hit'); void r.offsetWidth; r.classList.add('dash-hit'); }
+  });
+  const sel = document.getElementById('f-status'); if(sel){ sel.value = Array.from(sel.options).some(o=>o.value===kind) ? kind : 'all'; }
+  root.scrollIntoView({behavior:'smooth', block:'start'});
 }
-async function declineDeleteRequest(id){
-  const c = archivedJob(id); if(!c || !c.deleteRequest) return;
-  const mine = c.deleteRequest.by===state.person;
-  if(!canDeleteJob(c) && !mine){ toast('Only the Admin or the person who asked can cancel this request.'); return; }
-  const old = c.deleteRequest;
-  c.deleteRequest = null;
-  const ok = await saveContainers(state.containers);
-  if(!ok){ c.deleteRequest = old; renderApp(); return; }
-  await pushLog(`Deletion request for archived job ${c.containerNumber} ${mine && !canDeleteJob(c) ? 'withdrawn' : 'declined'} — by ${state.person}.`, 'Admin');
-  toast(mine && !canDeleteJob(c) ? 'Request withdrawn.' : 'Request declined.');
-  closeModal(); renderApp();
+function goJobs(tab, kind){ state.activeTab = tab; renderApp(); setTimeout(()=>listFilter(kind), 40); }
+function goJobsKind(kind){ if(isSCTL()) sctlGoJobs(kind); else goJobs('endtoend', kind); }
+function finNetGo(n){ state.finFilter = n<0 ? 'loss' : 'profit'; renderTab(); setTimeout(()=>scrollHit('fin-rows'), 40); }
+function archFilter(kind){
+  const root = document.getElementById('arch-list'); if(!root) return;
+  const q = document.getElementById('arch-search'); if(q) q.value='';
+  root.querySelectorAll('.arch-row').forEach(r=>{
+    const show = kind==='all' || (kind==='stepped' && r.dataset.stepped==='1') || (kind==='delivered' && r.dataset.deliv==='1') || (kind==='inprog' && r.dataset.prog==='1');
+    r.style.display = show ? '' : 'none';
+    if(show && kind!=='all'){ r.classList.remove('dash-hit'); void r.offsetWidth; r.classList.add('dash-hit'); }
+  });
+  root.scrollIntoView({behavior:'smooth', block:'start'});
+}
+/* SCTL: read-only list of every job on every terminal, opened from the Global Dashboard tiles */
+function sctlGoJobs(status, term){ state.sctlJobs = {status:status||'all', term:term||'all', q:''}; state.activeTab='alljobs'; renderApp(); }
+function sctlJobsFiltered(){
+  const f = state.sctlJobs || {status:'all', term:'all', q:''};
+  const q = (f.q||'').trim().toLowerCase();
+  return state.containers.filter(c=>{
+    if(f.term!=='all' && c.terminalId!==f.term) return false;
+    const stepped = !!(c.steppedDown&&c.steppedDown.status), st = c.stageIdx||0;
+    if(f.status==='alerts' && !activeAlertCount([c])) return false;
+    if(f.status==='dup' && !c.duplicateFlag) return false;
+    if(f.status==='stepped' && !stepped) return false;
+    if(f.status==='delivered' && !(st>=13 && !stepped)) return false;
+    if((f.status==='cpc'||f.status==='terminal') && (stepped || stageGroup(c)!==f.status)) return false;
+    return !q || [c.containerNumber,c.billOfLading,c.item,c.owner,c.agent].join(' ').toLowerCase().includes(q);
+  });
+}
+function sctlJobsChange(){
+  state.sctlJobs = {status:(document.getElementById('sj-status')||{}).value||'all', term:(document.getElementById('sj-term')||{}).value||'all', q:(document.getElementById('sj-q')||{}).value||''};
+  const el = document.getElementById('job-list'); if(el) el.innerHTML = jobListHTML(sctlJobsFiltered(), {showTerminal:true});
+  const n = document.getElementById('sj-count'); if(n) n.textContent = sctlJobsFiltered().length+' job'+(sctlJobsFiltered().length===1?'':'s');
+}
+function sctlAllJobsHTML(){
+  const f = state.sctlJobs || (state.sctlJobs={status:'all', term:'all', q:''});
+  const list = sctlJobsFiltered();
+  const opt = (v,l)=>`<option value="${v}" ${f.status===v?'selected':''}>${l}</option>`;
+  return `
+    <div class="topbar"><div><h1>All Jobs</h1><div class="desc">Every job on every bonded terminal. SCTL can open and read any job here but cannot change it — job changes are made by the terminal staff.</div></div></div>
+    <div class="panel"><div class="panel-head"><h3>Jobs <span class="tag-line" id="sj-count">${list.length} job${list.length===1?'':'s'}</span></h3>
+      <div class="toolbar">
+        <select id="sj-status" onchange="sctlJobsChange()">${opt('all','All jobs')}${opt('alerts','With active alerts')}${opt('dup','Duplicate-flagged')}${opt('cpc','In CPC')}${opt('terminal','At terminal')}${opt('delivered','Delivered / returned')}${opt('stepped','Stepped down')}</select>
+        <select id="sj-term" onchange="sctlJobsChange()"><option value="all">All terminals</option>${state.terminals.map(t=>`<option value="${t.id}" ${f.term===t.id?'selected':''}>${jobEsc(t.name)}</option>`).join('')}</select>
+        <input type="text" id="sj-q" placeholder="Search container, BOL…" value="${jobEsc(f.q||'')}" oninput="sctlJobsChange()">
+      </div></div>
+      <div class="panel-body" style="padding:0 18px;" id="job-list">${jobListHTML(list, {showTerminal:true})}</div></div>`;
+}
+
+/* ---------- Financial reconciliation: month by month, then year by year ---------- */
+function monthKey(c){ const d=new Date(c.createdAt||0); return (isNaN(d)||!c.createdAt)?'0000-00':d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function deliveredOn(c){ if(c.deliveredDate) return c.deliveredDate; const h=(c.history||[]).filter(x=>x.stage>=13&&x.t).sort((a,b)=>new Date(a.t)-new Date(b.t))[0]; return h?h.t:null; }
+function deliveredKey(c){ const t=deliveredOn(c); if(!t) return null; const d=new Date(t); return isNaN(d)?null:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+function monthLabel(k){ if(k==='0000-00') return 'Undated'; const p=k.split('-'); return new Date(Number(p[0]),Number(p[1])-1,1).toLocaleDateString('en-GB',{month:'long',year:'numeric'}); }
+function finTotals(list){ const rev=list.reduce((s,c)=>s+(Number(c.financial.processingCharge)||0),0), exp=list.reduce((s,c)=>s+jobExpensesOf(c),0), other=list.reduce((s,c)=>s+jobOtherOf(c),0); return {n:list.length,rev,exp,other,net:rev-exp}; }
+function isPaidJob(c){ return (c.invoices||[]).some(i=>i.paymentStatus==='paid'); }
+function finAnnualHTML(all0){
+  const list = all0.filter(c=>deliveredKey(c));
+  const paidUndel = all0.filter(c=>!deliveredKey(c) && isPaidJob(c));
+  if(!list.length && !paidUndel.length) return '<div class="empty-state" style="padding:20px;">No delivered or paid jobs yet.</div>';
+  const pu = paidUndel.length ? (()=>{ const t=finTotals(paidUndel); return `<div style="margin-bottom:10px;"><h4 style="margin:6px 0;">Paid, not yet delivered</h4>
+    <div class="tag-line" style="margin-bottom:6px;">${t.n} job${t.n===1?'':'s'} · Charges <b>${fmtNaira(t.rev)}</b> · Expenses so far <b>${fmtNaira(t.exp)}</b> · <b style="color:${plColor(t.net)};">${plLabel(t.net)}</b></div>
+    ${paidUndel.map(c=>`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line,#E4E0D2);"><span><b class="mono">${jobEsc(c.containerNumber)}</b> <span class="tag-line">${jobEsc(ownerAgentLabel(c))} · registered ${fmtDate(c.createdAt)}</span></span><span>${fmtNaira(c.financial.processingCharge)} · ${plLabel(jobProfitOf(c))}</span></div>`).join('')}</div>`; })() : '';
+  const years = {}; list.forEach(c=>{ const k=deliveredKey(c); const y=k.slice(0,4); ((years[y]=years[y]||{})[k]=years[y][k]||[]).push(c); });
+  const cols = 'grid-template-columns:minmax(120px,1.4fr) repeat(4,minmax(80px,1fr));';
+  const head = `<div class="tag-line" style="display:grid;${cols}gap:8px;padding:6px 0;border-bottom:1px solid var(--line,#E4E0D2);font-weight:600;"><span>Period</span><span>Jobs</span><span>Charges</span><span>Expenses</span><span>Profit / loss</span></div>`;
+  const line = (lbl,t,bold)=>`<div style="display:grid;${cols}gap:8px;padding:7px 0;border-bottom:1px solid var(--line,#E4E0D2);${bold?'font-weight:700;':''}"><span>${lbl}</span><span>${t.n}</span><span>${fmtNaira(t.rev)}</span><span>${fmtNaira(t.exp)}</span><span style="color:${plColor(t.net)};">${t.net<0?'−':''}${fmtNaira(Math.abs(t.net))}</span></div>`;
+  return Object.keys(years).sort().reverse().map(y=>{
+    const all = Object.values(years[y]).flat();
+    return `<div style="overflow-x:auto;margin-bottom:18px;"><div style="min-width:560px;"><h4 style="margin:6px 0;">${y==='0000'?'Undated':y}</h4>${head}
+      ${Object.keys(years[y]).sort().map(k=>line(monthLabel(k), finTotals(years[y][k]), false)).join('')}
+      ${line('Total for '+(y==='0000'?'undated jobs':y), finTotals(all), true)}</div></div>`;
+  }).join('') + pu;
+}
+function dashFilter(kind){
+  const set = (id,v)=>{ const el=document.getElementById(id); if(el) el.value=v; };
+  set('f-status', kind==='all' ? 'all' : kind); set('f-owner-filter','all'); set('f-agent-filter','all');
+  const q = document.getElementById('job-search'); if(q) q.value='';
+  applyAdminFilters();
+  const list = document.getElementById('job-list');
+  if(list){
+    list.scrollIntoView({behavior:'smooth', block:'start'});
+    list.querySelectorAll('.job-row').forEach(r=>{ if(r.style.display!=='none'){ r.classList.remove('dash-hit'); void r.offsetWidth; r.classList.add('dash-hit'); } });
+  }
 }
 
 function isUntouchedJob(c){
@@ -3586,7 +4399,7 @@ function archivedPanelHTML(){
 }
 function archRowHTML(c){
   const stage = STAGES[c.stageIdx] || STAGES[0];
-  return `<div class="arch-row" data-q="${jobEsc([c.containerNumber,c.billOfLading,c.item,c.owner,c.agent,c.destination].join(' ').toLowerCase())}" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line,#e3e6dc);">
+  return `<div class="arch-row" data-stepped="${c.steppedDown&&c.steppedDown.status?1:0}" data-deliv="${c.stageIdx>=13?1:0}" data-prog="${c.stageIdx<13?1:0}" data-q="${jobEsc([c.containerNumber,c.billOfLading,c.item,c.owner,c.agent,c.destination].join(' ').toLowerCase())}" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line,#e3e6dc);">
     <div style="min-width:220px;flex:1;"><div class="mono"><b>${jobEsc(c.containerNumber)}</b> ${c.steppedDown&&c.steppedDown.status?'<span class="pill stepped" style="margin-left:6px;">Stepped down</span>':''}</div>
       <div class="tag-line">${jobEsc(c.billOfLading)} · ${jobEsc(c.size)} · ${jobEsc(c.item)}</div>
       <div class="tag-line">At stage ${c.stageIdx+1}: ${jobEsc(stage.code)}${isSCTL()?' · '+jobEsc(terminalName(c.terminalId)):''}</div>
@@ -3595,7 +4408,7 @@ function archRowHTML(c){
       <button class="btn small secondary" onclick="openContainer('${c.id}')">Open</button>
       ${(!(c.steppedDown&&c.steppedDown.status) && (isStaff()&&c.terminalId===state.terminalId&&can('stepDown')))?`<button class="btn small danger" onclick="archiveStepDown('${c.id}')">Step down</button>`:''}
       ${canArchiveJob(c)?`<button class="btn small" onclick="restoreJob('${c.id}')">Restore</button>`:''}
-      ${deleteButtonsHTML(c)}
+      ${archiveDeleteButtons(c)}
     </div></div>`;
 }
 function archiveStepDown(id){ openContainer(id); showStepDownForm(id); }
@@ -3606,12 +4419,13 @@ function filterArchive(){
 function archiveHTML(){
   const list = (state.archived||[]).filter(c=>isSCTL()||c.terminalId===state.terminalId).sort((a,b)=> new Date((b.archived||{}).date||0)-new Date((a.archived||{}).date||0));
   return `
-    <div class="topbar"><div><h1>Archive</h1><div class="desc">Every archived job${isSCTL()?' across all terminals':' at '+jobEsc(terminalName(state.terminalId))}. Open one to see everything recorded on it, step it down, or restore it to the active list.</div></div></div>
+    <div class="topbar"><div><h1>Archive</h1><div class="desc">Every archived job${isSCTL()?' across all terminals':' at '+jobEsc(terminalName(state.terminalId))}. Open one to see everything recorded on it, step it down, restore it, or delete it (deleting needs the Admin's approval).</div></div></div>
+    ${(()=>{ const n=list.filter(c=>c.deleteRequest).length; return n ? `<div class="stepdown-card" style="margin-bottom:12px;"><h4>${n} deletion request${n>1?'s':''} waiting</h4><p style="font-size:12.5px;">${canDeleteJob(list[0])?'Approve or decline each one below.':'The Admin has to approve each one before the job is deleted.'}</p></div>` : ''; })()}
     <div class="metric-row">
-      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Archived jobs</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.steppedDown&&c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.stageIdx>=13).length}</div><div class="lbl">Delivered / returned</div></div>
-      <div class="metric"><div class="num">${list.filter(c=>c.stageIdx<13).length}</div><div class="lbl">Still in progress when archived</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="archFilter('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();archFilter('all')}"><div class="num">${list.length}</div><div class="lbl">Archived jobs</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="archFilter('stepped')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();archFilter('stepped')}"><div class="num">${list.filter(c=>c.steppedDown&&c.steppedDown.status).length}</div><div class="lbl">Stepped down</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="archFilter('delivered')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();archFilter('delivered')}"><div class="num">${list.filter(c=>c.stageIdx>=13).length}</div><div class="lbl">Delivered / returned</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="archFilter('inprog')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();archFilter('inprog')}"><div class="num">${list.filter(c=>c.stageIdx<13).length}</div><div class="lbl">Still in progress when archived</div></div>
       ${isSCTL()?'':`<div class="metric"><div class="num">${list.filter(c=>c.deleteRequest).length}</div><div class="lbl">Deletion requests</div></div>`}
     </div>
     <div class="panel"><div class="panel-head"><h3>Archived jobs</h3>
@@ -3729,6 +4543,7 @@ function docRowHTML(c, d, i, ctx){
   }
   const actions = [];
   if(ctx.staff && isTerminalAdmin()) actions.push(`<button class="btn small ghost" onclick="openEditDoc('${c.id}',${i})">✎ Edit info</button>`);
+  if(mine) actions.push(`<button class="btn small danger" onclick="confirmDeleteDoc('${c.id}',${i})">Delete</button>`);
   if(canReject && !rejectingHere) actions.push(`<button class="btn small danger" onclick="startRejectDoc('${c.id}',${i})">Reject</button>`);
   if(canFix) actions.push(ctx.staff
     ? `<button class="btn small secondary" onclick="startReplaceDoc('${c.id}',${i})">Upload the correct one</button>`
@@ -3743,7 +4558,9 @@ function docRowHTML(c, d, i, ctx){
 function documentsSectionHTML(c, ctx){
   const docs = c.documents||[];
   const rows = docs.map((d,i)=>docRowHTML(c,d,i,ctx)).join('') || '<div class="tag-line">No documents uploaded yet.</div>';
-  if(!(ctx.staff || ctx.client)) return rows;
+  const nFiles = docs.filter(d=>d.fileId).length;
+  const dlAll = nFiles ? `<div style="margin:6px 0 10px;"><button class="btn small secondary" onclick="downloadAllDocs('${c.id}')">⬇ Download all documents (${nFiles})</button></div>` : '';
+  if(!(ctx.staff || ctx.client)) return dlAll + rows;
   let rp = null;
   if(state.docReplace && state.docReplace.cid===c.id){ const t = docs[state.docReplace.idx]; if(t && t.rejected && !isReplaced(c,t)) rp = t; }
   const clients = [...new Set([c.owner, c.agent].filter(Boolean))];
@@ -3757,7 +4574,7 @@ function documentsSectionHTML(c, ctx){
       <button class="btn small secondary" id="doc-submit" onclick="submitDocument('${c.id}')">${rp?'Upload corrected document':'Upload document'}</button>
       <div class="hint">PDF, image, Word, Excel, CSV or text, up to ${FILE_MAX_MB} MB. The file itself is stored on the server, and anyone who can see this job can download it.</div>
     </div>`;
-  return rows + form;
+  return dlAll + rows + form;
 }
 function startRejectDoc(cid, idx){ state.rejectingDoc = cid+':'+idx; openContainer(cid); }
 function cancelRejectDoc(cid){ state.rejectingDoc = null; openContainer(cid); }
@@ -3766,7 +4583,7 @@ function cancelReplaceDoc(cid){ state.docReplace = null; openContainer(cid); }
 async function confirmRejectDoc(cid, idx){
   const c = byId(cid); const d = (c.documents||[])[idx];
   if(!d) return;
-  if(!canRejectDocs()){ toast('Only Admin, Documentation or DTI staff can reject a document.'); return; }
+  if(!canRejectDocs()){ toast('Only Admin, Documentation, Accountant or DTI staff can reject a document.'); return; }
   const reason = ((document.getElementById('doc-reject-reason')||{}).value||'').trim();
   if(reason.length<3){ toast('Say what is wrong with the document so the importer or agent knows what to fix.'); return; }
   if(!d.id) d.id = newDocId();
@@ -3833,7 +4650,7 @@ async function saveEditDoc(cid, i){
   await pushLog(`Document information corrected on ${c.containerNumber} by ${state.person}: ${was} → ${name} (${type})`, 'Admin', c.terminalId);
   toast('Document information updated.'); openContainer(cid);
 }
-function canRejectDocs(){ return state.role==='sctl' || ['Admin','Documentation','DTI'].includes(state.department); }
+function canRejectDocs(){ return ['Admin','Documentation','Accountant','DTI'].includes(state.department); }
 function msgFileHTML(m){
   if(!m.fileName) return '';
   const size = m.sizeKB ? ' ('+m.sizeKB+' KB)' : '';
@@ -3860,19 +4677,20 @@ function sctlDashboardHTML(){
   return `
     <div class="topbar"><div><h1>Global Dashboard</h1><div class="desc">Oversight of transire movement, delivery, and terminal processing across every registered bonded terminal — from letter processing at the Mother Port to delivery at the customer's door.</div></div></div>
     <div class="metric-row">
-      <div class="metric"><div class="num">${activeTerminals.length}</div><div class="lbl">Active terminals</div></div>
-      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Total jobs, all terminals</div></div>
-      <div class="metric"><div class="num">${alerts}</div><div class="lbl">Active alerts, all terminals</div></div>
-      <div class="metric"><div class="num">${dup}</div><div class="lbl">Duplicate-flagged jobs</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="switchTab('terminals')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('terminals')}"><div class="num">${activeTerminals.length}</div><div class="lbl">Active terminals</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="sctlGoJobs('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sctlGoJobs('all')}"><div class="num">${list.length}</div><div class="lbl">Total jobs, all terminals</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="sctlGoJobs('alerts')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sctlGoJobs('alerts')}"><div class="num">${alerts}</div><div class="lbl">Active alerts, all terminals</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="sctlGoJobs('dup')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();sctlGoJobs('dup')}"><div class="num">${dup}</div><div class="lbl">Duplicate-flagged jobs</div></div>
     </div>
+    ${pwResetPanelHTML()}
     ${pendingTerminals.length? `<div class="panel inbox-panel"><div class="panel-head"><h3>Pending terminal requests</h3></div><div class="panel-body">
       ${pendingTerminals.map(t=>`<div class="inbox-row"><span><b>${t.name}</b><div class="tag-line">${t.address}</div></span><button class="btn small secondary" onclick="switchTab('verification')">Review in Verification Queue</button></div>`).join('')}
     </div></div>` : ''}
     <div class="panel"><div class="panel-head"><h3>Jobs per terminal</h3></div>
       <div class="panel-body">
-        ${perTerminal.length? perTerminal.map(p=>`<div class="staff-row" style="grid-template-columns:2fr 1fr 1fr 1fr;">
+        ${perTerminal.length? perTerminal.map(p=>`<div class="staff-row" style="grid-template-columns:2fr 1fr 1fr 1fr;cursor:pointer;" onclick="sctlGoJobs('all','${p.t.id}')" title="Open this terminal's jobs">
           <span><b>${p.t.name}</b><div class="tag-line">${p.t.address} · <span class="pill ${p.t.status==='active'?'ok':(p.t.status==='pending'?'wait':'done')}">${p.t.status}</span></div></span>
-          <span>${p.count} jobs</span><span>${p.alerts} alerts</span><span>${p.stepped} stepped down</span>
+          <span style="text-decoration:underline;">${p.count} jobs</span><span style="text-decoration:underline;" onclick="event.stopPropagation();sctlGoJobs('alerts','${p.t.id}')">${p.alerts} alerts</span><span style="text-decoration:underline;" onclick="event.stopPropagation();sctlGoJobs('stepped','${p.t.id}')">${p.stepped} stepped down</span>
         </div>`).join('') : '<div class="tag-line">No terminals registered yet.</div>'}
       </div></div>
     <div class="panel"><div class="panel-head"><h3>All jobs — every terminal</h3>
@@ -3902,11 +4720,60 @@ function sctlTerminalsHTML(){
             <span style="display:flex; gap:6px; flex-wrap:wrap;">
               ${t.status!=='active'?`<button class="btn small secondary" onclick="sctlSetTerminalStatus('${t.id}','active')">Activate</button>`:''}
               ${t.status==='active'?`<button class="btn small secondary" onclick="sctlSetTerminalStatus('${t.id}','suspended')">Suspend</button>`:''}
+              <button class="btn small secondary" onclick="sctlTerminalDetails('${t.id}')">Full details</button>
+              <button class="btn small secondary" onclick="sctlEditTerminal('${t.id}')">Edit profile</button>
+              <button class="btn small secondary" onclick="sctlTerminalReset('${t.id}')">Reset password</button>
               <button class="btn small danger" onclick="sctlRemoveTerminal('${t.id}')">Remove</button>
             </span>
           </div>`;
         }).join('')}
       </div></div>`;
+}
+function terminalAdmins(tid){ return state.users.filter(u=>u.role==='admin' && u.department==='Admin' && u.terminalId===tid); }
+function sctlTerminalDetails(tid){
+  const t = terminalById(tid); if(!t) return;
+  const jobs = state.containers.filter(c=>c.terminalId===tid), staff = state.users.filter(u=>u.terminalId===tid && u.role!=='importer' && u.role!=='agent'), clients = state.users.filter(u=>u.terminalId===tid && (u.role==='importer'||u.role==='agent'));
+  const adm = terminalAdmins(tid);
+  showModalHTML(`
+    <div class="modal-head"><div><h2 style="font-size:18px;">${jobEsc(t.name)}</h2><div class="tag-line">Full details</div></div><button class="btn ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="kv"><b>Address</b><span>${jobEsc(t.address||'—')}</span></div>
+      <div class="kv"><b>Status</b><span>${jobEsc(t.status)}</span></div>
+      <div class="kv"><b>Registered</b><span>${fmtDate(t.registeredDate)}</span></div>
+      <div class="kv"><b>Jobs</b><span>${jobs.length}</span></div>
+      <div class="kv"><b>Staff accounts</b><span>${staff.length}</span></div>
+      <div class="kv"><b>Importers and agents</b><span>${clients.length}</span></div>
+      <h4 style="margin:14px 0 6px;">Terminal Admins</h4>
+      ${adm.length ? adm.map(u=>`<div class="staff-row" style="grid-template-columns:1fr auto;"><span><b>${jobEsc(u.name)}</b> ${u.status==='suspended'?'<span class="pill wait">Suspended</span>':''}<div class="tag-line mono">${jobEsc(u.login)}</div></span><span style="display:flex;gap:6px;"><button class="btn small secondary" onclick="closeModal();openAccountDetails('${u.id}')">Full details</button><button class="btn small" onclick="closeModal();adminResetPassword('${u.id}')">Reset password</button></span></div>`).join('') : '<div class="tag-line">No Admin account yet for this terminal.</div>'}
+    </div>`);
+}
+function sctlEditTerminal(tid){
+  const t = terminalById(tid); if(!t) return;
+  showModalHTML(`
+    <div class="modal-head"><div><h2 style="font-size:18px;">Edit terminal profile</h2><div class="tag-line">${jobEsc(t.name)}</div></div><button class="btn ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">
+      <div class="field"><label>Terminal name</label><input type="text" id="et-name" value="${jobEsc(t.name)}"></div>
+      <div class="field"><label>Address</label><input type="text" id="et-address" value="${jobEsc(t.address||'')}"></div>
+      <button class="btn" onclick="sctlSaveTerminal('${tid}')">Save changes</button>
+    </div>`);
+}
+async function sctlSaveTerminal(tid){
+  const t = terminalById(tid); if(!t) return;
+  const name = document.getElementById('et-name').value.trim(), address = document.getElementById('et-address').value.trim();
+  if(!name || !address){ toast('Terminal name and address are required.'); return; }
+  const old = t.name; t.name = name; t.address = address;
+  state.users.forEach(u=>{ if(u.terminalId===tid && u.org===old && u.role!=='importer' && u.role!=='agent') u.org = name; });
+  await saveTerminals(state.terminals); try{ await saveUsers(state.users); }catch(e){}
+  await pushLog(`Terminal "${old}" profile updated by SCTL.`, null, tid);
+  closeModal(); toast('Terminal profile saved.'); renderTab();
+}
+function sctlTerminalReset(tid){
+  const adm = terminalAdmins(tid);
+  if(!adm.length){ toast('This terminal has no Admin account yet. Create one under Accounts.'); return; }
+  if(adm.length===1){ adminResetPassword(adm[0].id); return; }
+  showModalHTML(`
+    <div class="modal-head"><div><h2 style="font-size:18px;">Reset password</h2><div class="tag-line">Choose the Admin · ${jobEsc(terminalName(tid))}</div></div><button class="btn ghost" onclick="closeModal()">✕</button></div>
+    <div class="modal-body">${adm.map(u=>`<div class="staff-row" style="grid-template-columns:1fr auto;"><span><b>${jobEsc(u.name)}</b><div class="tag-line mono">${jobEsc(u.login)}</div></span><button class="btn small" onclick="closeModal();adminResetPassword('${u.id}')">Reset password</button></div>`).join('')}</div>`);
 }
 async function sctlAddTerminal(){
   const name = document.getElementById('new-t-name').value.trim();
@@ -4003,10 +4870,10 @@ function customsMotherportHTML(){
   return `
     <div class="topbar"><div><h1>Mother Port Movements</h1><div class="desc">Transire/letter movement from CPC-CAC through loading and exit at WACT/OMT, across every registered bonded terminal, until each container reaches its bonded terminal. Every stage change below is time-stamped, not just dated.</div></div></div>
     <div class="metric-row">
-      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Containers at Mother Port stages</div></div>
-      <div class="metric"><div class="num">${byStage['CPC-CAC']||0}</div><div class="lbl">At CPC-CAC (just started)</div></div>
-      <div class="metric"><div class="num">${byStage['MPT-LOAD']||0}</div><div class="lbl">Loading at MPT</div></div>
-      <div class="metric"><div class="num">${byStage['MPT-EXIT']||0}</div><div class="lbl">Exiting Mother Port</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('all')}"><div class="num">${list.length}</div><div class="lbl">Containers at Mother Port stages</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('code:CPC-CAC')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('code:CPC-CAC')}"><div class="num">${byStage['CPC-CAC']||0}</div><div class="lbl">At CPC-CAC (just started)</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('code:MPT-LOAD')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('code:MPT-LOAD')}"><div class="num">${byStage['MPT-LOAD']||0}</div><div class="lbl">Loading at MPT</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="listFilter('code:MPT-EXIT')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();listFilter('code:MPT-EXIT')}"><div class="num">${byStage['MPT-EXIT']||0}</div><div class="lbl">Exiting Mother Port</div></div>
     </div>
     <div class="panel"><div class="panel-head"><h3>All Mother Port jobs</h3>
       <div class="toolbar"><input type="text" id="job-search" placeholder="Search container, BOL…" oninput="filterJobRows(this.value)"></div></div>
