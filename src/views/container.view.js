@@ -41,6 +41,8 @@ function customsJob(c, profile) {
   for (const k of ['history', 'documents', 'alerts']) if (Array.isArray(out[k])) out[k] = out[k].map(blankNames);
   if (out.steppedDown) out.steppedDown = blankNames(out.steppedDown);
   if (out.arrivedBy) out.arrivedBy = '';
+  if (out.transporter) out.transporter = null;                     // haulage company and driver details are not for customs
+  if (Array.isArray(out.transportHistory) && out.transportHistory.length) out.transportHistory = [];
   const me = profile && profile.name;
   if (Array.isArray(out.progressNotes)) out.progressNotes = out.progressNotes.map(n => (n && n.by && n.by !== me) ? Object.assign({}, n, { by: STAFF_LABEL }) : n);
   return out;

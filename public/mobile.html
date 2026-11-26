@@ -1660,7 +1660,7 @@ function idUploadHTML(){
     <h2>Identity Verification</h2>
     <div class="lede">${d.role==='customs' ? 'Upload your Customs Service credential.' : 'Before you can access dashboards, upload a clear photo of your ID for review.'}</div>
     ${state.authError?`<div class="err-text">${state.authError}</div>`:''}
-      <div class="field"><label>ID type</label><select id="id-type" onchange="document.getElementById('id-type-other-wrap').style.display=this.value==='Other'?'block':'none'">${opts.concat(['Other']).map(o=>`<option>${o}</option>`).join('')}</select></div>
+      <div class="field"><label>ID type</label><select id="id-type" onchange="document.getElementById('id-type-other-wrap').style.display=this.value==='Other'?'block':'none'">${Array.from(new Set(opts.concat(['Other']))).map(o=>`<option>${o}</option>`).join('')}</select></div>
     <div class="field" id="id-type-other-wrap" style="display:none;"><label>Type of document</label><input type="text" id="id-type-other" maxlength="60" placeholder="e.g. Residence permit, Staff badge, NIN slip"></div>
     <div class="field"><label>Upload ID photo</label><input type="file" id="id-file" accept="image/*"></div>
     <button class="btn full" onclick="submitIdVerification()">Submit for verification</button>
@@ -4164,7 +4164,7 @@ function openContainer(id){
         ${(canEdit && can('seal'))?`<span style="display:flex; gap:6px;"><input type="text" id="seal-bol" value="${jobEsc(c.sealNumber||'')}" placeholder="e.g. SL-48211" style="max-width:220px;"><button class="btn small secondary" onclick="saveBolSeal('${c.id}')">Save</button></span>`
           : `<span class="mono">${jobEsc(c.sealNumber)||'—'}</span>`}</span></div>`}
 
-      <div class="section-title">Transporter / driver</div>
+      ${isCustoms() ? '' : `<div class="section-title">Transporter / driver</div>
       ${c.transporter ? `
       <div class="kv"><b>Current transporter</b><span>${c.transporter.name}</span></div>
       <div class="kv"><b>Phone</b><span class="mono">${c.transporter.phone||'—'}</span></div>
@@ -4193,6 +4193,7 @@ function openContainer(id){
       <div class="fhint" style="margin-bottom:6px;">${tm==='new'?'The current driver is kept in the handover history above, and the new driver becomes the current transporter.':(tm==='fix'?'This replaces the current details without adding a handover.':'First assignment of a transporter/driver to this job.')}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn small secondary" onclick="saveTransporter('${c.id}')">${tm==='new'?'Save new driver':'Save transporter / driver'}</button>${c.transporter?`<button class="btn small ghost" onclick="cancelTransporterMode('${c.id}')">Cancel</button>`:''}</div>`;
       })() : ''}
+      `}
 
       ${returnSectionHTML(c)}
 

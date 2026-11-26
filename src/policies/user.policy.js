@@ -92,9 +92,9 @@ function checkUsersWrite(oldArr, newArr, authUser) {
       if (id === authUser.id && oldU && newU && protectedFieldChanged(oldU, newU))
         return OWN_PROTECTED;
     }
-      if (identityChanged(oldU, newU)) return 'Your name, sign-in email, phone and other details are changed by your terminal Admin (or SCTL). You can change your profile picture and ID card.';
     return null;
   }
+
 
   // Everyone else: may only ever change their own record, no add/remove, and never the fields that grant power.
   if (newArr.length !== oldArr.length)
@@ -105,6 +105,7 @@ function checkUsersWrite(oldArr, newArr, authUser) {
     if (sameUserRecord(oldU, newU)) continue;
     if (id !== authUser.id) return "You can only update your own profile.";
     if (protectedFieldChanged(oldU, newU)) return OWN_PROTECTED;
+    if (identityChanged(oldU, newU)) return 'Your name, sign-in email, phone and other details are changed by your terminal Admin (or SCTL). You can change your profile picture and ID card.';
   }
   return null;
 }
