@@ -3,7 +3,8 @@
 
 const { DERIVED_CONTAINER_KEYS } = require('../constants/stages');
 const { changedContainerKeys, noteVisibleTo, canSeeFinanceData } = require('../policies/container.policy');
-const { isTransport, hideParties, alertVisible, docVisible } = require('../views/container.view');
+const { isTransport, hideParties, alertVisible, docVisible, redactJobFor } = require('../views/container.view');
+const { deepEqual } = require('../utils/compare');
 
 // Put back the items of a list that this person was never shown. Everything they could see takes the version they sent
 // (or is removed if they dropped it); stored order is kept and brand-new items go on the end.
@@ -66,6 +67,21 @@ function mergeContainers(full, oldView, parsed, user, profile) {
     if (!visibleIds.has(c.id)) { out.push(c); continue; }   // not theirs: untouched
     const n = incoming.get(c.id);
     if (!n) continue;                                          // deleted (already permission-checked)
+    if (user.role === 'customs') {          // customs can only add, edit or delete their own comments; everything else stays exactly as stored
+      const ov = oldView.find(x => x.id === c.id) || {};
+      const shown = new Map((ov.progressNotes || []).filter(x => x && x.id).map(x => [x.id, x]));
+      const stored = new Map((c.progressNotes || []).filter(x => x && x.id).map(x => [x.id, x]));
+      const notes = (Array.isArray(n.progressNotes) ? n.progressNotes : []).map(x => {
+        const s = x && stored.get(x.id);
+        if (!s) return x;                                              // a new comment of theirs
+        if (deepEqual(shown.get(x.id), x)) return s;                   // untouched: keep the stored copy (real name)
+        return Object.assign({}, s, { text: x.text, edited: x.edited, editedAt: x.editedAt });   // their own edit
+      });
+      const kept = Object.assign({}, c, { progressNotes: mergeList(c.progressNotes, notes, x => !noteVisibleTo(user, c, x)) });
+      kept._v = changedContainerKeys(c, kept).filter(k => k !== '_v').length ? (c._v || 0) + 1 : (c._v || 0);
+      out.push(kept);
+      continue;
+    }
     const next = stripDerived(n);
     if (sees) cleanMoney(next); else keepMoney(c, next, user);
     next.progressNotes = mergeList(c.progressNotes, next.progressNotes, x => !noteVisibleTo(user, c, x));   // sections they never saw

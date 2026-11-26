@@ -15,7 +15,7 @@ function checkAndMergeReferrals(full, parsed, user, profile, body) {
     const keys = new Set([...Object.keys(r), ...Object.keys(n)]);
     for (const k of keys) {
       if (deepEqual(r[k], n[k])) continue;
-      if (k === 'status' && canEditReferralStatus(user)) continue;
+      if (k === 'status' && canEditReferralStatus(user, r)) continue;
       return { error: 'You are not allowed to change that referral.' };
     }
   }
@@ -23,13 +23,14 @@ function checkAndMergeReferrals(full, parsed, user, profile, body) {
     if (fullIds.has(n.id)) continue;
     if (!profile || n.referrerName !== profile.name) return { error: 'A referral must be submitted under your own name.' };
     if (n.status !== 'pending') return { error: 'A new referral must start as pending.' };
+    if (user.terminalId && n.terminalId && n.terminalId !== user.terminalId) return { error: 'A referral can only be filed with your own terminal.' };
   }
   const out = [];
   for (const c of full) {
     if (!visible.has(c.id)) { out.push(c); continue; }
     const n = incoming.get(c.id);
     if (!n) continue;
-    out.push(canEditReferralStatus(user) ? Object.assign({}, c, { status: n.status }) : c);
+    out.push(canEditReferralStatus(user, c) ? Object.assign({}, c, { status: n.status }) : c);
   }
   for (const n of parsed) if (!fullIds.has(n.id)) out.push(n);
   return { merged: out };

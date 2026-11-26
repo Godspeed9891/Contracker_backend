@@ -26,6 +26,26 @@ function docVisible(user, profile, d) {
   return !!d && (TRANSPORT_DOC_TYPES.includes(d.type) || (!!profile && d.uploadedBy === profile.name));
 }
 
+// A customs officer sees the container and its movement, the letters, and the comments in their own section, but never
+// which member of the terminal's staff did what. Staff names are blanked, and staff who wrote a comment show as "Terminal staff".
+const STAFF_LABEL = 'Terminal staff';
+const NAME_KEYS = ['by', 'user', 'uploadedBy', 'raisedBy', 'resolvedBy', 'addedBy', 'movedBy', 'recordedBy', 'arrivedBy'];
+function blankNames(o) {
+  if (!o || typeof o !== 'object' || Array.isArray(o)) return o;
+  const x = Object.assign({}, o);
+  for (const k of NAME_KEYS) if (k in x) x[k] = '';
+  return x;
+}
+function customsJob(c, profile) {
+  const out = Object.assign({}, c);
+  for (const k of ['history', 'documents', 'alerts']) if (Array.isArray(out[k])) out[k] = out[k].map(blankNames);
+  if (out.steppedDown) out.steppedDown = blankNames(out.steppedDown);
+  if (out.arrivedBy) out.arrivedBy = '';
+  const me = profile && profile.name;
+  if (Array.isArray(out.progressNotes)) out.progressNotes = out.progressNotes.map(n => (n && n.by && n.by !== me) ? Object.assign({}, n, { by: STAFF_LABEL }) : n);
+  return out;
+}
+
 // What this person is allowed to see of a stored job.
 //  - comments: terminal staff see every section, importers/agents/customs only their own, SCTL none;
 //  - the money: everyone except finance staff gets just the processing charge written at first entry.
@@ -40,6 +60,7 @@ function redactJobFor(user, c, profile) {
   if (isTransport(user) && Array.isArray(c.documents) && c.documents.some(d => !docVisible(user, profile, d))) {
     out = Object.assign({}, out, { documents: c.documents.filter(d => docVisible(user, profile, d)) });
   }
+  if (user && user.role === 'customs') out = customsJob(out, profile);
   if (hideParties(user) && (c.owner || c.agent)) out = Object.assign({}, out, { owner: '', agent: '' });
   if (!canSeeFinanceData(user, profile)) {
     const f = c.financial || {};
@@ -51,4 +72,4 @@ function redactJobFor(user, c, profile) {
   return out;
 }
 
-module.exports = { redactJobFor, invoicesFor, isTransport, hideParties, alertVisible, docVisible };
+module.exports = { redactJobFor, invoicesFor, isTransport, hideParties, alertVisible, docVisible, STAFF_LABEL };

@@ -2135,7 +2135,7 @@ function buildNav(){
   }
   if(state.role==='sctl'){
     return [['dashboard','Global Dashboard'],['terminals','Terminal Management'],['accounts','Accounts'],['alljobs','All Jobs'],['directory','Terminal Directory'],['verification','Verification Queue'],['archive','Archive'],
-      ['reports','Performance Reports'],['finance','Reconciliation'],['referrals','Referrals'],['support','Support'],['activity','Activity Log'],['settings','Platform Settings']];
+      ['reports','Performance Reports'],['finance','Reconciliation'],['support','Support'],['activity','Activity Log'],['settings','Platform Settings']];
   }
   if(state.role==='customs'){
     return [['dashboard','Mother Port Movements'],['directory','Terminal Directory'],['search','Container / BOL Search'],['comments','Comments']];
@@ -2407,6 +2407,8 @@ function supportHTML(){
   const myClients = uniqueNames(state.containers.filter(c=>c.terminalId===state.terminalId), 'owner')
     .concat(uniqueNames(state.containers.filter(c=>c.terminalId===state.terminalId), 'agent'));
   const uniqueClients = [...new Set(myClients)];
+  const custPrefix = 'customs:'+state.terminalId;
+  const custThreads = [...new Set(state.messages.map(m=>String(m.channel||'')).filter(ch=>ch===custPrefix || ch.startsWith(custPrefix+':')))];
   const internalKey = 'internal:'+state.terminalId;
   const activeThread = state.supportThreadKey || internalKey;
   const msgs = state.messages.filter(m=>m.channel===activeThread);
@@ -2422,14 +2424,14 @@ function supportHTML(){
             <textarea id="msg-text" rows="2" placeholder="Type a message…"></textarea>
             ${tagUIHTML(activeThread)}
             ${attachBoxHTML('msg')}
-            <button class="btn small" onclick="sendMessage('${activeThread}')">Send</button>
+            <button class="btn small" onclick="sendMessage(${JSON.stringify(activeThread).replace(/"/g,'&quot;')})">Send</button>
           </div></div>
       </div>
       <div>
         <div class="panel"><div class="panel-head"><h3>Threads</h3></div>
           <div class="panel-body">
             <div class="thread-item ${activeThread===internalKey?'active':''}" onclick="openThread('${internalKey}')"><b>Internal Staff Chat</b><div class="tag-line">Coordinate with your own terminal's team</div></div>
-            <div class="thread-item ${activeThread==='customs:'+state.terminalId?'active':''}" onclick="openThread('customs:${state.terminalId}')"><b>Customs (Mother Port)</b><div class="tag-line">WACT / OMT liaison</div></div>
+            ${custThreads.length ? custThreads.map(ch=>`<div class="thread-item ${activeThread===ch?'active':''}" onclick="openThread(${JSON.stringify(ch).replace(/"/g,'&quot;')})"><b>Customs${ch.length>custPrefix.length+1?' — '+jobEsc(ch.slice(custPrefix.length+1)):' (earlier messages)'}</b><div class="tag-line">Mother Port liaison</div></div>`).join('') : `<div class="thread-item"><b>Customs (Mother Port)</b><div class="tag-line">A thread for each customs officer appears here once they write to you.</div></div>`}
             <div class="thread-item ${activeThread==='sctl:'+state.terminalId?'active':''}" onclick="openThread('sctl:${state.terminalId}')"><b>SCTL (platform support)</b><div class="tag-line">Message the SCTL super admin</div></div>
             ${uniqueClients.map(name=>`<div class="thread-item ${activeThread==='client:'+name?'active':''}" onclick="openThread('client:${name}')"><b>${name}</b><div class="tag-line">Importer / agent</div></div>`).join('')}
           </div></div>
@@ -5289,7 +5291,7 @@ function runCustomsSearch(){
 function customsCommentsHTML(){
   const active = state.custSelectedTerminal || (state.terminals[0] && state.terminals[0].id);
   const t = active ? terminalById(active) : null;
-  const channel = 'customs:'+active;
+  const channel = 'customs:'+active+':'+state.person;   // each customs officer has a private thread with each terminal
   const msgs = active ? state.messages.filter(m=>m.channel===channel) : [];
   return `
     <div class="topbar"><div><h1>Comments</h1><div class="desc">Interface directly with a bonded terminal's staff about transire and container movement.</div></div></div>
@@ -5302,7 +5304,7 @@ function customsCommentsHTML(){
             </div>
             <textarea id="msg-text" rows="2" placeholder="Type a message…" ${t?'':'disabled'}></textarea>
             ${attachBoxHTML('msg')}
-            <button class="btn small" onclick="sendMessage('${channel}')" ${t?'':'disabled'}>Send</button>
+            <button class="btn small" onclick="sendMessage(${JSON.stringify(channel).replace(/"/g,'&quot;')})" ${t?'':'disabled'}>Send</button>
           </div></div>
       </div>
       <div>

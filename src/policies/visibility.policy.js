@@ -21,13 +21,21 @@ function userVisibleTo(user, u) {
 function canSeeIdImage(user, u) {
   return isSctl(user) || u.id === user.id || (user.role === 'admin' && user.department === 'Admin' && u.terminalId === user.terminalId);
 }
-function referralVisibleTo(user, profile, r) { return isSctl(user) || (!!profile && r.referrerName === profile.name); }
-function canEditReferralStatus(user) { return isSctl(user); }
+const isTerminalAdminUser = u => !!u && u.role === 'admin' && u.department === 'Admin' && !!u.terminalId;
+function referralVisibleTo(user, profile, r) {
+  return (!!profile && r.referrerName === profile.name) || (isTerminalAdminUser(user) && !!r.terminalId && r.terminalId === user.terminalId);
+}
+function canEditReferralStatus(user, r) { return isTerminalAdminUser(user) && (!r || r.terminalId === user.terminalId); }
 function channelAllowed(user, profile, channel, m) {
   if (typeof channel !== 'string') return false;
   if (isSctl(user)) return true;
   if (channel.startsWith('internal:')) return user.role === 'admin' && channel.slice(9) === user.terminalId;
-  if (channel.startsWith('customs:')) return user.role === 'customs' || (user.role === 'admin' && channel.slice(8) === user.terminalId);
+  if (channel.startsWith('customs:')) {
+    const rest = channel.slice(8), i = rest.indexOf(':');
+    const tid = i < 0 ? rest : rest.slice(0, i), who = i < 0 ? null : rest.slice(i + 1);
+    if (user.role === 'customs') return !!who && !!profile && who === profile.name;
+    return user.role === 'admin' && tid === user.terminalId;
+  }
   if (channel.startsWith('client:')) {
     if (user.role === 'admin') return !m || !m.terminalId || m.terminalId === user.terminalId;
     return !!profile && (user.role === 'importer' || user.role === 'agent') && profile.name === channel.slice(7);
