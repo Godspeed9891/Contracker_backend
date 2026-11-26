@@ -2,7 +2,25 @@
 // staff-only comments, or the money figures and invoices they were not allowed to see.
 
 const { DERIVED_CONTAINER_KEYS } = require('../constants/stages');
-const { changedContainerKeys, canSeeStaffNotes, canSeeFinanceData } = require('../policies/container.policy');
+const { changedContainerKeys, noteVisibleTo, canSeeFinanceData } = require('../policies/container.policy');
+const { isTransport, hideParties, alertVisible, docVisible } = require('../views/container.view');
+
+// Put back the items of a list that this person was never shown. Everything they could see takes the version they sent
+// (or is removed if they dropped it); stored order is kept and brand-new items go on the end.
+function mergeList(stored, sent, hidden) {
+  stored = Array.isArray(stored) ? stored : [];
+  sent = Array.isArray(sent) ? sent : [];
+  if (!stored.some(hidden)) return sent;
+  const sentById = new Map(sent.filter(x => x && x.id).map(x => [x.id, x]));
+  const storedIds = new Set(stored.filter(x => x && x.id).map(x => x.id));
+  const out = [];
+  for (const s of stored) {
+    if (hidden(s) || !s || !s.id) out.push(s);
+    else if (sentById.has(s.id)) out.push(sentById.get(s.id));
+  }
+  for (const x of sent) if (!(x && x.id && storedIds.has(x.id))) out.push(x);
+  return out;
+}
 
 function stripDerived(c) {
   const o = Object.assign({}, c);
@@ -50,15 +68,11 @@ function mergeContainers(full, oldView, parsed, user, profile) {
     if (!n) continue;                                          // deleted (already permission-checked)
     const next = stripDerived(n);
     if (sees) cleanMoney(next); else keepMoney(c, next, user);
-    next._v = changedContainerKeys(c, next).filter(k => k !== '_v').length ? (c._v || 0) + 1 : (c._v || 0);
-    if (!canSeeStaffNotes(user)) {                             // put back staff-only comments they never saw
-      const hidden = (c.progressNotes || []).filter(x => x && x.staffOnly);
-      if (hidden.length) {
-        const keep = next.progressNotes || [];
-        next.progressNotes = keep.concat(hidden.filter(h => !keep.some(k => k && k.id && k.id === h.id)))
-          .sort((a, b) => new Date(a.date || 0) - new Date(b.date || 0));
-      }
-    }
+    next.progressNotes = mergeList(c.progressNotes, next.progressNotes, x => !noteVisibleTo(user, c, x));   // sections they never saw
+    if (Array.isArray(c.alerts) || Array.isArray(next.alerts)) next.alerts = mergeList(c.alerts, next.alerts, a => !alertVisible(user, a));
+    if (isTransport(user)) next.documents = mergeList(c.documents, next.documents, d => !docVisible(user, profile, d));
+    if (hideParties(user)) { next.owner = c.owner; next.agent = c.agent; }
+    next._v = changedContainerKeys(c, next).filter(k => k !== '_v').length ? (c._v || 0) + 1 : (c._v || 0);   // after everything is put back
     out.push(next);
   }
   for (const n of parsed) {

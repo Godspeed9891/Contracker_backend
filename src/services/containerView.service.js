@@ -32,7 +32,7 @@ async function withDuplicateFlags(full, view) {
 
 async function containersViewFor(user, full) {
   const profile = await profileOf(user);
-  const view = full.filter(c => jobVisibleTo(user, profile, c)).map(c => redactJobFor(user, c));
+  const view = full.filter(c => jobVisibleTo(user, profile, c)).map(c => redactJobFor(user, c, profile));
   return { profile, view: await withDuplicateFlags(full, view) };
 }
 

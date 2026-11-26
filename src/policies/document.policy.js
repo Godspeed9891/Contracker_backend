@@ -4,7 +4,7 @@ const { FEN_BOL_DEPTS } = require('../constants/stages');
 const { CLIENT_DOC_TYPES } = require('./container.policy');
 const { fileMeta } = require('../models/file.model');
 
-const STAFF_DOC_TYPES = ['Transfer Letter', 'Landing Certificate', 'Inspection Act', 'Exit Note', 'Gate Pass', 'PAAR', 'Bill of Lading',
+const STAFF_DOC_TYPES = ['Transfer Letter', 'Landing Certificate', 'Inspection Act', 'Exit Note', 'Gate Pass', 'PAAR', 'Bill of Lading', 'Interchange',
   'Duty Receipt', 'Manifest', 'SGD', 'Assessment Notice', 'SON Remita Payment Receipt', 'Other'];
 const DOC_FIELDS = new Set(['id', 'name', 'type', 'uploadedBy', 'uploadedByRole', 'date', 'sizeKB', 'fileId', 'mime', 'onBehalfOf', 'replaces', 'rejected']);
 function withoutKeys(o, keys) { const x = Object.assign({}, o); for (const k of keys) delete x[k]; return x; }
@@ -53,6 +53,14 @@ async function checkDocumentChanges(oldArr, newArr, user, profile) {
       const f = await fileMeta(inv.fileId);
       if (!f) return 'The invoice file was not found on the server. Upload it again.';
       if (f.uploaded_by !== user.id) return 'That invoice file was uploaded by someone else.';
+    }
+
+        const prevNoteIds = new Set((prev.progressNotes || []).map(n => n && n.id));
+    for (const n of (c.progressNotes || [])) {
+      if (!n || prevNoteIds.has(n.id) || !n.fileId) continue;
+      const f = await fileMeta(n.fileId);
+      if (!f) return 'The attached file was not found on the server. Attach it again.';
+      if (f.uploaded_by !== user.id) return 'That file was uploaded by someone else.';
     }
 
     if (deepEqual(pd, nd)) continue;
@@ -112,6 +120,7 @@ async function checkDocumentChanges(oldArr, newArr, user, profile) {
         if (!CLIENT_DOC_TYPES.includes(d.type)) return 'Importers and agents can only upload a Bill of Lading, a PAAR, or Other documents.';
       } else if (!STAFF_DOC_TYPES.includes(d.type)) return 'Unknown document type.';
       if (!d.fileId) return 'Choose the file to upload — a document must come with its file.';
+            if (!isClient && user.role === 'admin' && user.department === 'Transport' && !['Interchange', 'Other'].includes(d.type)) return 'Transport staff can only upload Interchange or Other documents.';
       const f = await fileMeta(d.fileId);
       if (!f) return 'The file was not found on the server. Upload it again.';
       if (f.uploaded_by !== user.id) return 'That file was uploaded by someone else.';

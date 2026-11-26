@@ -29,7 +29,8 @@ function changedContainerKeys(prev, next) {
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const validDate = s => DATE_RE.test(String(s)) && !isNaN(new Date(String(s) + 'T00:00:00Z'));
-const NOTE_KEYS = new Set(['id', 'text', 'by', 'date', 'staffOnly', 'replyTo', 'edited', 'editedAt']);
+const NOTE_KEYS = new Set(['id', 'text', 'by', 'date', 'staffOnly', 'audience', 'replyTo', 'edited', 'editedAt', 'fileId', 'fileName', 'mime']);
+const AUDIENCES = ['customs', 'importer', 'agent', 'staff'];
 const noteText = t => typeof t === 'string' && t.trim().length > 0 && t.length <= 2000;
 
 // Who sees the money on a job (the full breakdown, expenses, profit and the invoices): an Admin or Accountant, i.e. anyone
@@ -38,12 +39,36 @@ function canSeeFinanceData(user, profile) {
   return !!user && user.role === 'admin' && hasCap(user, profile, 'finance');
 }
 
-// Comments on a job. Whoever may write one adds it under their own name, may reply to a comment they can see, and may edit
-// (the text only) or delete their own comments, never anyone else's.
-function checkNoteChanges(prev, next, user, profile) {
-  prev = Array.isArray(prev) ? prev : [];
-  next = Array.isArray(next) ? next : [];
+// Every comment belongs to one section: customs, importer, agent, or staff (internal). A reply stays in its parent's section.
+// Comments saved before sections existed are placed by their staffOnly flag, their parent, or who wrote them.
+function noteAudience(job, n, depth) {
+  if (!n) return 'staff';
+  if (AUDIENCES.includes(n.audience)) return n.audience;
+  if (n.staffOnly) return 'staff';
+  const notes = (job && job.progressNotes) || [];
+  if (n.replyTo && (depth || 0) < 20) {
+    const par = notes.find(x => x && x.id === n.replyTo);
+    if (par && par !== n) return noteAudience(job, par, (depth || 0) + 1);
+  }
+  if (job && n.by && n.by === job.owner) return 'importer';
+  if (job && n.by && n.by === job.agent) return 'agent';
+  return 'staff';
+}
+// Terminal staff read every section; importers, agents and customs read only their own; SCTL reads none.
+function noteVisibleTo(user, job, n) {
+  if (!user || user.role === 'sctl') return false;
+  if (user.role === 'admin') return true;
+  return noteAudience(job, n) === user.role;
+}
+function canSeeStaffNotes(user) { return !!user && user.role === 'admin'; }
+
+// Comments on a job. Whoever may write one adds it under their own name, in their own section (staff choose any section),
+// may reply inside a section they can see, and may edit (the text only) or delete their own comments, never anyone else's.
+function checkNoteChanges(prevJob, nextJob, user, profile) {
+  const prev = Array.isArray(prevJob.progressNotes) ? prevJob.progressNotes : [];
+  const next = Array.isArray(nextJob.progressNotes) ? nextJob.progressNotes : [];
   if (!profile) return 'Your profile was not found.';
+  if (user.role === 'sctl') return 'SCTL cannot write comments.';
   if (next.length > 500) return 'Too many comments on one job.';
   const prevById = new Map(prev.filter(n => n && n.id).map(n => [n.id, n]));
   const nextById = new Map();
@@ -68,9 +93,24 @@ function checkNoteChanges(prev, next, user, profile) {
     if (n.edited || n.editedAt) return 'Invalid comment.';
     if (n.by !== profile.name) return 'A comment must be written under your own name.';
     if (!noteText(n.text)) return 'A comment cannot be empty or longer than 2000 characters.';
-    if (n.staffOnly && user.role !== 'admin') return 'Only terminal staff can write staff-only comments.';
     if (typeof n.date !== 'string' || isNaN(new Date(n.date))) return 'Invalid comment.';
-    if (n.replyTo && !prevById.has(n.replyTo) && !nextById.has(n.replyTo)) return 'You can only reply to a comment you can see.';
+    if (n.fileId !== undefined && (typeof n.fileId !== 'string' || !n.fileId || n.fileId.length > 80)) return 'Invalid attachment.';
+    if (n.fileName !== undefined && (typeof n.fileName !== 'string' || n.fileName.length > 200)) return 'Invalid attachment.';
+    if (n.mime !== undefined && (typeof n.mime !== 'string' || n.mime.length > 120)) return 'Invalid attachment.';
+    if ((n.fileName || n.mime) && !n.fileId) return 'Invalid attachment.';
+    // the section
+    let aud = n.audience;
+    if (n.replyTo) {
+      const par = prevById.get(n.replyTo) || nextById.get(n.replyTo);
+      if (!par || par === n) return 'You can only reply to a comment you can see.';
+      const pa = noteAudience(prevJob, par);
+      if (aud !== undefined && aud !== pa) return 'A reply stays in the same section as the comment it answers.';
+      aud = pa;
+    }
+    if (user.role !== 'admin') {
+      if (aud !== user.role) return 'Write your comment in your own section.';
+    } else if (!AUDIENCES.includes(aud)) return 'Choose which section the comment belongs to.';
+    if (n.staffOnly !== undefined && n.staffOnly !== (aud === 'staff')) return 'Invalid comment.';
   }
   return null;
 }
@@ -86,8 +126,6 @@ function jobVisibleTo(user, profile, c) {
   if (user.role === 'agent') return c.agent === profile.name;
   return false;
 }
-
-function canSeeStaffNotes(user) { return !!user && (user.role === 'admin' || user.role === 'sctl'); }
 
 // Importers and agents may only fill in the delivery location and upload (pending) invoices on their own jobs.
 function checkInvoiceAppend(prev, next, profile) {
@@ -106,7 +144,7 @@ function checkInvoiceAppend(prev, next, profile) {
 
 // Importers and agents may add Bill of Lading, PAAR and Other documents to their own jobs — add only, under their own name.
 const CLIENT_DOC_TYPES = ['Bill of Lading', 'PAAR', 'Other'];
-function checkClientJobWrite(oldArr, newArr, profile) {
+function checkClientJobWrite(oldArr, newArr, authUser, profile) {
   const oldById = new Map(oldArr.map(c => [c.id, c]));
   if (newArr.length !== oldArr.length || newArr.some(c => !oldById.has(c.id))) return 'Importers and agents cannot add or remove jobs.';
   for (const c of newArr) {
@@ -114,8 +152,13 @@ function checkClientJobWrite(oldArr, newArr, profile) {
     for (const k of changedContainerKeys(prev, c)) {
       if (k === 'deliveryLocation') continue;
       if (k === 'documents') continue; // checked in full by checkDocumentChanges
+      if (k === 'transporter' || k === 'transportHistory') {   // the importer or agent on a job may record the transporter and add a driver
+        const x = c[k];
+        if (x !== null && x !== undefined && x !== '' && (typeof x !== 'object' || JSON.stringify(x).length > 20000)) return 'Invalid transporter details.';
+        continue;
+      }
       if (k === 'financial') continue; // they only see a summary; the server keeps the stored breakdown
-      if (k === 'progressNotes') { const err = checkNoteChanges(prev.progressNotes, c.progressNotes, { role: 'importer' }, profile); if (err) return err; continue; }
+      if (k === 'progressNotes') { const err = checkNoteChanges(prev, c, authUser, profile); if (err) return err; continue; }
       if (k === 'invoices') { const err = checkInvoiceAppend(prev.invoices || [], c.invoices || [], profile); if (err) return err; continue; }
       return 'Importers and agents can only update the delivery location, upload invoices, write comments, and add a Bill of Lading, PAAR or Other document (not the ' + labelOf(k) + ' on ' + c.containerNumber + ').';
     }
@@ -124,14 +167,14 @@ function checkClientJobWrite(oldArr, newArr, profile) {
 }
 
 // Customs may read every job and write comments on them, nothing else.
-function checkCustomsJobWrite(oldArr, newArr, profile) {
+function checkCustomsJobWrite(oldArr, newArr, authUser, profile) {
   const oldById = new Map(oldArr.map(c => [c.id, c]));
   if (newArr.length !== oldArr.length || newArr.some(c => !oldById.has(c.id))) return 'Customs cannot add or remove jobs.';
   for (const c of newArr) {
     const prev = oldById.get(c.id);
     for (const k of changedContainerKeys(prev, c)) {
       if (k === 'financial') continue;
-      if (k === 'progressNotes') { const err = checkNoteChanges(prev.progressNotes, c.progressNotes, { role: 'customs' }, profile); if (err) return err; continue; }
+      if (k === 'progressNotes') { const err = checkNoteChanges(prev, c, authUser, profile); if (err) return err; continue; }
       return 'Customs can only write comments on a job (not change the ' + labelOf(k) + ' on ' + c.containerNumber + ').';
     }
   }
@@ -176,8 +219,8 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
     }
     return null;
   }
-  if (authUser.role === 'importer' || authUser.role === 'agent') return checkClientJobWrite(oldArr, newArr, profile);
-  if (authUser.role === 'customs') return checkCustomsJobWrite(oldArr, newArr, profile);
+  if (authUser.role === 'importer' || authUser.role === 'agent') return checkClientJobWrite(oldArr, newArr, authUser, profile);
+  if (authUser.role === 'customs') return checkCustomsJobWrite(oldArr, newArr, authUser, profile);
   if (authUser.role !== 'admin') return 'Only bonded terminal staff accounts can change job records.';
 
   const dept = authUser.department;
@@ -223,7 +266,8 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
         const access = (dept === 'Admin')
           ? null // a terminal's Admin may set any stage
           : (granted || (Array.isArray(stageCache.own[dept]) ? stageCache.own[dept] : (stageCache.platform[dept] || DEFAULT_DEPT_STAGE_ACCESS[dept] || [])));
-        if (access && !access.includes(c[k]) && !access.includes(prev[k])) {
+        const allowed = (access && dept === 'Accountant') ? access.concat([6, 7, 8, 9, 10, 11, 12, 13, 14]) : access;
+        if (allowed && !allowed.includes(c[k]) && !allowed.includes(prev[k])) {
           return 'The ' + dept + ' department is not allowed to move ' + c.containerNumber + ' to that stage.';
         }
         continue;
@@ -255,7 +299,7 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
         }
       }
       if (k === 'progressNotes') {
-        const err = checkNoteChanges(prev.progressNotes, c.progressNotes, authUser, profile);
+        const err = checkNoteChanges(prev, c, authUser, profile);
         if (err) return err;
         continue;
       }
@@ -276,6 +320,6 @@ async function checkContainersWrite(oldArr, newArr, authUser, profile) {
 }
 
 module.exports = {
-  isUntouchedJob, changedContainerKeys, jobVisibleTo, canSeeStaffNotes, canSeeFinanceData, hasCap,
+  isUntouchedJob, changedContainerKeys, jobVisibleTo, canSeeStaffNotes, noteAudience, noteVisibleTo, canSeeFinanceData, hasCap,
   checkInvoiceAppend, CLIENT_DOC_TYPES, checkClientJobWrite, checkContainersWrite
 };

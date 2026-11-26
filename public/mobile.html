@@ -378,6 +378,8 @@ select:focus, input:focus, textarea:focus{outline:none;border-color:var(--ink);b
 #login-screen{position:relative;overflow:hidden;background:#0A0A0B;justify-content:flex-start;align-items:center;padding:32px 5vw;}
 #login-screen::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;background:linear-gradient(0deg,rgba(10,10,11,.94) 0%,rgba(10,10,11,.35) 30%,rgba(10,10,11,0) 52%),linear-gradient(90deg,#0A0A0B 0%,#0A0A0B 36%,rgba(10,10,11,.55) 52%,rgba(10,10,11,0) 70%);}
 #login-screen::after{content:none;}
+.jump-row{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px;}
+#dash-tasks,#dash-inbox{scroll-margin-top:12px;}
 .hero-mosaic{position:absolute;top:-8vh;bottom:-8vh;right:0;width:64vw;display:flex;gap:14px;padding-right:14px;z-index:0;}
 .hero-mosaic .col{flex:1;display:flex;flex-direction:column;gap:14px;}
 .hero-mosaic .col:nth-child(1){margin-top:-3vh;animation:ctdrift 46s ease-in-out infinite alternate;}
@@ -492,6 +494,7 @@ select:focus, input:focus, textarea:focus{outline:none;border-color:var(--ink);b
 .inbox-panel h3,.inbox-panel .tag-line{color:#fff;}
 .inbox-panel .hint,.inbox-panel .tag-line{color:#a9a79a;}
 .inbox-row{border-bottom:1px dashed rgba(255,255,255,.16);}
+[hidden]{display:none !important;}
 .inbox-panel .btn{background:var(--y);color:#111;border-color:var(--y);}
 .inbox-panel .btn.secondary{background:var(--y);color:#111;}
 .job-row{border-radius:16px;padding:14px 14px;margin-bottom:4px;border-bottom:none;transition:background .15s, transform .15s, box-shadow .15s;}
@@ -784,17 +787,18 @@ const DEFAULT_DEPT_STAGE_ACCESS = {Documentation:ALL_STAGE_IDX, DTI:ALL_STAGE_ID
 const CAP_DEFS = {
   fen:{label:'Register jobs and edit job details (First Entry Note)', depts:['Admin','Documentation','Accountant','DTI']},
   bol:{label:'Complete Book of Life (A-Number and C-Number)', depts:['Admin','Documentation','Accountant','DTI']},
-  alert:{label:'Raise alerts on jobs', depts:['Admin','Documentation','Accountant','DTI']},
-  stepDown:{label:'Step down or reactivate a job', depts:['Admin','Documentation','Accountant','DTI','Field Staff']},
+  alert:{label:'Raise alerts on jobs', depts:['Admin','Documentation','Accountant','DTI','Operations','Field Staff']},
+  stepDown:{label:'Step down or reactivate a job', depts:['Admin','Documentation','Accountant','DTI','Field Staff','Operations']},
   exit:{label:'Update the exit number', depts:['Admin','Documentation','Accountant','DTI','Operations']},
-  transporter:{label:'Record the transporter and add a new driver', depts:['Admin','Documentation','Accountant','DTI','Transport']},
+  transporter:{label:'Record the transporter and add a new driver', depts:['Admin','Documentation','Accountant','DTI','Transport','Operations']},
   transferNo:{label:'Update the transfer letter number', depts:['Admin','Documentation', 'Accountant','Operations']},
   invoiceNo:{label:'Update the invoice / charge number', depts:['Admin','Accountant','DTI','Operations']},
-  deliveryLoc:{label:'Enter the delivery location', depts:['Admin','Documentation','Accountant','DTI','Transport']},
+  deliveryLoc:{label:'Enter the delivery location', depts:['Admin','Documentation','Accountant','DTI','Transport','Operations']},
   finance:{label:'Financial reconciliation, invoices and payments', depts:['Admin','Accountant']},
-  archiveView:{label:'See the Archive page', depts:['Admin','Documentation','Accountant','DTI']},
+  archiveView:{label:'See the Archive page', depts:['Admin','Documentation','Accountant','DTI','Operations']},
   archive:{label:'Archive and restore jobs', depts:['Admin']},
-  returnDates:{label:'Record the empty-container return dates and check demurrage', depts:['Admin','Documentation','Accountant','DTI','Transport']}
+  returnDates:{label:'Record the empty-container return dates and check demurrage', depts:['Admin','Documentation','Accountant','DTI','Transport','Operations']},
+  seal:{label:'Record the seal number (Book of Life)', depts:['Admin','Documentation','DTI','Operations']}
 };
 const FINANCE_LOG_RE = /^(Financial breakdown updated|Duty payment recorded|Invoice uploaded|Invoice on .* (approved|rejected)|Invoice payment status)/;
 function isFinanceLog(l){ return !!l && (l.dept==='Accountant' || FINANCE_LOG_RE.test(String(l.msg||''))); }
@@ -817,8 +821,10 @@ const ALERT_TYPES = {
   'DSS':{action:'Container seal does not match the terminal record. Do not accept delivery — contact Terminal Admin immediately.'}
 };
 const CLIENT_DOC_TYPES = ['Bill of Lading','PAAR','Other']; // what an importer or agent may upload themselves
-function docTypesFor(){ return (state.role==='importer'||state.role==='agent') ? CLIENT_DOC_TYPES : DOC_TYPES; }
-const DOC_TYPES = ['Transfer Letter','Landing Certificate','Inspection Act','Exit Note','Gate Pass','PAAR','Bill of Lading','Duty Receipt','Manifest','SGD','Assessment Notice','SON Remita Payment Receipt','Other'];
+function docTypesFor(){ return (state.role==='importer'||state.role==='agent') ? CLIENT_DOC_TYPES : (isTransport() ? TRANSPORT_DOC_TYPES : DOC_TYPES); }
+function docShownToMe(d){ return !isTransport() || TRANSPORT_DOC_TYPES.includes(d.type) || d.uploadedBy===state.person; }
+const DOC_TYPES = ['Transfer Letter','Landing Certificate','Inspection Act','Exit Note','Gate Pass','PAAR','Bill of Lading','Duty Receipt','Manifest','SGD','Assessment Notice','SON Remita Payment Receipt','Interchange','Other'];
+const TRANSPORT_DOC_TYPES = ['Interchange','Other']; /* what transport staff upload and see */
 const ROLE_META = {
   importer:{name:'Importer', sub:'Track containers, costs, and delivery ETA'},
   agent:{name:'Clearing Agent', sub:'Manage client jobs and resolve alerts'},
@@ -1057,7 +1063,7 @@ async function pushLog(msg, dept, terminalId){
   state.log = state.log.slice(0,200);
   await saveLog();
 }
-async function loadReferrals(){ try{ const r = await window.storage.get('referrals', true); return r? JSON.parse(r.value) : seedReferrals(); }catch(e){ return []; } }
+async function loadReferrals(){ try{ const r = await window.storage.get('referrals', true); const v = r? JSON.parse(r.value) : null; return (v && v.length) ? v : seedReferrals(); }catch(e){ return []; } }
 async function saveReferrals(){ try{ await window.storage.set('referrals', JSON.stringify(state.referrals), true); return true; }catch(e){ await handleSaveFailure(e); return false; } }
 async function loadMessages(){ try{ const r = await window.storage.get('messages', true); return r? JSON.parse(r.value) : seedMessages(); }catch(e){ return []; } }
 async function saveMessages(opts){ try{ await window.storage.set('messages', JSON.stringify(state.messages), true, opts); return true; }catch(e){ await handleSaveFailure(e); return false; } }
@@ -1080,7 +1086,7 @@ async function bootStatic(){
 function daysAgo(n){ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString(); }
 function mkHistory(uptoIdx, startDaysAgo, staffName){
   const hist=[]; let day=startDaysAgo;
-  for(let i=0;i<=uptoIdx;i++){ hist.push({stage:i, t:daysAgo(day)+ 'T'+String(8+i%10).padStart(2,'0')+':'+String((i*13)%60).padStart(2,'0')+':00.000Z', user: staffName}); day -= (1+Math.floor(Math.random()*2)); }
+  for(let i=0;i<=uptoIdx;i++){ hist.push({stage:i, t:daysAgo(day).slice(0,10)+'T'+String(7+(i*3)%11).padStart(2,'0')+':'+String((i*13+7)%60).padStart(2,'0')+':00.000Z', user: staffName}); day -= (1+Math.floor(Math.random()*2)); }
   return hist.reverse();
 }
 function seedTerminals(){ return []; }
@@ -1128,7 +1134,7 @@ function seedMoreJobs(){
     sj('c11','t1','TGHU8123456','BL-91003','40ft','Mobile Phones','Enugu Retail Mall',['o','Tunde Bakare'],{stage:13,age:30,charge:40000,eta:dayStr(32),arrived:dayStr(31),x:{deliveredDate:daysAgo(6)},
       fin:{terminalCharges:48000,clearingExpenses:20000,transportation:15000,customsDuties:420000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80290',dutyPaymentDate:daysAgo(12)},
       invoices:[invo('i11','210000','approved','unpaid',AC,7,'Invoice_TGHU8123456.pdf')], tl:'BBT/TR/24/OMT/013', exit:'BBT/EX/24/053',
-      notes:[{id:'n11a',text:'Container delivered to the consignee. Delivery note signed.',by:'Grace Nwosu',date:daysAgo(6)},{id:'n11b',text:'Thank you, received in good condition.',by:'Tunde Bakare',date:daysAgo(5),replyTo:'n11a'}]}),
+      notes:[{id:'n11a',audience:'importer',text:'Container delivered to the consignee. Delivery note signed.',by:'Grace Nwosu',date:daysAgo(6)},{id:'n11b',text:'Thank you, received in good condition.',by:'Tunde Bakare',date:daysAgo(5),replyTo:'n11a'}]}),
     // ---- paid but not yet delivered (annual summary: paid, undelivered) ----
     sj('c12','t1','HASU4455667','BL-91004','20ft','Cooking Oil','Aba Distribution Centre',['a','Amina Garba'],{stage:9,age:20,charge:22000,eta:dayStr(22),arrived:dayStr(21),
       fin:{terminalCharges:42000,clearingExpenses:19000,customsDuties:95000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80311',dutyPaymentDate:daysAgo(8)},
@@ -1138,15 +1144,15 @@ function seedMoreJobs(){
     sj('c14','t1','APHU6677881','BL-91006','20ft','Rice (50kg bags)','Kaduna Grain Market',['a','Fatima Sule'],{stage:0,age:6,eta:dayStr(4),bol:false}),
     sj('c15','t1','FSCU9012345','BL-91007','40ft','Electric Generators','Warri Industrial Estate',['o','Tunde Bakare'],{stage:1,age:10,eta:dayStr(9)}),
     sj('c16','t1','GESU5566778','BL-91008','20ft','Beverages','Calabar Wholesale',['a','Chidi Okonkwo'],{stage:2,age:9,eta:dayStr(6),arrived:dayStr(3),
-      notes:[{id:'n16a',text:'Vessel arrived three days after the ETA. Documents have been lodged with the Area Controller.',by:'Blessing Eze',date:daysAgo(3)}]}),
+      notes:[{id:'n16a',audience:'staff',text:'Vessel arrived three days after the ETA. Documents have been lodged with the Area Controller.',by:'Blessing Eze',date:daysAgo(3)}]}),
     // ---- alerts ----
     sj('c17','t1','NYKU3344990','BL-91009','40ft','Cosmetics','Lagos Beauty Supplies',['o','Ngozi Adeyemi'],{stage:5,age:14,eta:dayStr(16),arrived:dayStr(15),
       alerts:[{id:'a17a',type:'NAFDAC',desc:'Cosmetics consignment needs a NAFDAC product registration certificate.',status:'active',dateDetected:daysAgo(2)},{id:'a17b',type:'SON',desc:'Product certificate was requested and has now been supplied.',status:'resolved',dateDetected:daysAgo(8)}]}),
     sj('c18','t1','ECMU7788123','BL-91010','20ft','Used Clothing','Onitsha Bridgehead Market',['a','Chidi Okonkwo'],{stage:7,age:17,eta:dayStr(19),arrived:dayStr(18),
       alerts:[{id:'a18a',type:'DC Valuation',desc:'Declared value is far below the market value for this cargo. Supporting valuation documents are required.',status:'active',dateDetected:daysAgo(3)},{id:'a18b',type:'T&T',desc:'Tariff classification needs confirming with the agent.',status:'active',dateDetected:daysAgo(1)}],
-      notes:[{id:'n18a',text:'Customs asked for the valuation documents. Please send the supplier invoice and the packing list.',by:'Ifeanyi Umeh',date:daysAgo(2)},{id:'n18b',text:'I will bring the supplier invoice to the terminal tomorrow morning.',by:'Chidi Okonkwo',date:daysAgo(2),replyTo:'n18a'},{id:'n18c',text:'Internal: valuation officer is Mr Sani. Do not release before the documents are checked.',by:'Adaeze Obi',date:daysAgo(1),staffOnly:true}]}),
+      notes:[{id:'n18a',audience:'agent',text:'Customs asked for the valuation documents. Please send the supplier invoice and the packing list.',by:'Ifeanyi Umeh',date:daysAgo(2)},{id:'n18b',text:'I will bring the supplier invoice to the terminal tomorrow morning.',by:'Chidi Okonkwo',date:daysAgo(2),replyTo:'n18a'},{id:'n18c',text:'Internal: valuation officer is Mr Sani. Do not release before the documents are checked.',by:'Adaeze Obi',date:daysAgo(1),staffOnly:true}]}),
     sj('c19','t1','BMOU6120045','BL-91011','40ft','Auto Spare Parts','Nnewi Parts Market',['o','Tunde Bakare'],{stage:12,age:26,eta:dayStr(28),arrived:dayStr(27),
-      alerts:[{id:'a19a',type:'DSS',desc:'Seal recorded at examination (SL-48211) does not match the seal recorded at delivery (SL-48299).',status:'active',dateDetected:daysAgo(1)}],
+      alerts:[{id:'a19a',type:'DSS',desc:'Seal number does not match the terminal record (SL-48211 vs SL-48299).',status:'active',dateDetected:daysAgo(1)}],
       x:{sealNumber:'SL-48211',sealNumberDelivery:'SL-48299',sealMismatch:true}, tl:'BBT/TR/24/OMT/015', exit:'BBT/EX/24/054', load:daysAgo(12)}),
     // ---- detention / empty return overdue ----
     sj('c20','t1','TEMU2233445','BL-91012','20ft','Plastic Containers','Sapele Depot',['a','Amina Garba'],{stage:13,age:35,eta:dayStr(37),arrived:dayStr(36),det:daysAgo(9),
@@ -1174,10 +1180,10 @@ function seedMoreJobs(){
       invoices:[invo('i27a','250000','pending','unpaid',AC,2,'Invoice_HDMU4501928_v2.pdf'),Object.assign(invo('i27b','230000','rejected','unpaid',AC,4,'Invoice_HDMU4501928_v1.pdf'),{reviewNote:'Wrong amount on the invoice. Please correct and upload again.'})]}),
     // ---- comment threads: importer question, staff reply, customs comment ----
     sj('c28','t1','WHLU3300991','BL-91019','20ft','Industrial Chemicals','Port Harcourt Plant',['a','Fatima Sule'],{stage:6,age:11,eta:dayStr(13),arrived:dayStr(12),tl:'BBT/TR/24/OMT/019',load:daysAgo(1),
-      notes:[{id:'n28a',text:'Loading at the Mother Port has started. Expect the transire in two days.',by:'Grace Nwosu',date:daysAgo(1)},
+      notes:[{id:'n28a',audience:'agent',text:'Loading at the Mother Port has started. Expect the transire in two days.',by:'Grace Nwosu',date:daysAgo(1)},
         {id:'n28b',text:'Please confirm the truck will carry the hazard placards.',by:'Fatima Sule',date:daysAgo(1),replyTo:'n28a'},
         {id:'n28c',text:'Confirmed. The truck is fitted with hazard placards and the driver is certified.',by:'Grace Nwosu',date:daysAgo(0),replyTo:'n28b'},
-        {id:'n28d',text:'Container sealed and checked at the Mother Port. All good from Customs.',by:'Aisha Bello',date:daysAgo(0)}]}),
+        {id:'n28d',audience:'customs',text:'Container sealed and checked at the Mother Port. All good from Customs.',by:'Aisha Bello',date:daysAgo(0)}]}),
     // ---- Greenhaven (second terminal) ----
     sj('c29','t2','SEGU8800221','BL-91020','40ft','Kitchen Appliances','Ikeja Mall',['o','Halima Yusuf'],{stage:14,age:48,charge:28000,eta:dayStr(50),arrived:dayStr(49),x:{deliveredDate:daysAgo(21)},
       fin:{terminalCharges:52000,clearingExpenses:21000,transportation:16000,customsDuties:240000,dutyStatus:'paid',dutyPaymentRef:'RCPT-80455',dutyPaymentDate:daysAgo(30)},
@@ -1185,7 +1191,7 @@ function seedMoreJobs(){
     sj('c30','t2','TRHU7700334','BL-91021','20ft','Wheat Flour','Ajegunle Mill',['a','Segun Adewale'],{stage:1,age:8,eta:dayStr(5),
       alerts:[{id:'a30a',type:'SON',desc:'Product certificate is required for this flour consignment.',status:'active',dateDetected:daysAgo(1)}]}),
     sj('c31','t2','UACU5544117','BL-91022','40ft','Office Furniture','Victoria Island Offices',['o','Halima Yusuf'],{stage:10,age:15,eta:dayStr(17),arrived:dayStr(16),tl:'BBT/TR/24/WACT/010',
-      notes:[{id:'n31a',text:'Examination has been scheduled for tomorrow at 10am. Please send your representative.',by:'Chiamaka Obi',date:daysAgo(1)},{id:'n31b',text:'Our representative Mr Bello will be there at 10am.',by:'Halima Yusuf',date:daysAgo(1),replyTo:'n31a'}]})
+      notes:[{id:'n31a',audience:'importer',text:'Examination has been scheduled for tomorrow at 10am. Please send your representative.',by:'Chiamaka Obi',date:daysAgo(1)},{id:'n31b',text:'Our representative Mr Bello will be there at 10am.',by:'Halima Yusuf',date:daysAgo(1),replyTo:'n31a'}]})
   ];
 }
 function seedMessages(){
@@ -1231,12 +1237,7 @@ function seedLog(){
     L('l15','MSKU3344556 flagged as a duplicate registration, also seen at Belburge International Limited Bonded Terminal (BILBT).','Admin','t2',2,9)
   ];
 }
-function seedReferrals(){
-  return [
-    {id:'r1',referrerName:'Ngozi Adeyemi',referrerRole:'importer',referredName:'Blue Anchor Traders',referredContact:'08031230000',type:'importer',note:'Imports tiles and wants to use this terminal.',status:'pending',date:daysAgo(3)},
-    {id:'r2',referrerName:'Chidi Okonkwo',referrerRole:'agent',referredName:'Kemi Logistics',referredContact:'kemi@kemilogistics.com',type:'agent',note:'Experienced clearing agent at Onne.',status:'pending',date:daysAgo(1)}
-  ];
-}
+function seedReferrals(){ return []; }
 
 /* ========================= HELPERS ========================= */
 function fmtNaira(n){ return '₦' + Number(n||0).toLocaleString('en-NG'); }
@@ -1255,6 +1256,8 @@ function toast(msg){
 function isSCTL(){ return state.role==='sctl'; }
 function isCustoms(){ return state.role==='customs'; }
 function isStaff(){ return state.role==='admin'; }
+function isTransport(){ return state.role==='admin' && state.department==='Transport'; }
+function clientOwnsJob(c){ return !!c && ((state.role==='importer' && c.owner===state.person) || (state.role==='agent' && c.agent===state.person)); }
 function myScopeMatches(c){ return isStaff() && c.terminalId===state.terminalId; } // SCTL can view every job but never change one
 function isTerminalAdmin(){ return isStaff() && state.department==='Admin'; }
 function me(){ return userById(state.userId) || {id:state.userId, role:state.role, department:state.department}; }
@@ -1274,7 +1277,7 @@ function canEditTransferLetter(c){ return myScopeMatches(c) && can('transferNo')
 function canEditInvoiceNumber(c){ return myScopeMatches(c) && can('invoiceNo'); }
 function canEditExitNumber(c){ return myScopeMatches(c) && can('exit'); }
 function canEditReturnDates(c){ return myScopeMatches(c) && can('returnDates'); }
-function canEditTransporter(c){ return myScopeMatches(c) && can('transporter'); }
+function canEditTransporter(c){ return (myScopeMatches(c) && can('transporter')) || clientOwnsJob(c); }
 function startTransporterMode(id, mode){ state.transporterMode = {id, mode}; openContainer(id); }
 function cancelTransporterMode(id){ state.transporterMode = null; openContainer(id); }
 async function saveTransporter(id){
@@ -1302,7 +1305,9 @@ async function saveTransporter(id){
   openContainer(id);
 }
 function checkMasterHold(){ if(state.settings.masterHold && !isSCTL()){ toast('Master Hold is active — SCTL has frozen this action platform-wide.'); return true; } return false; }
+function hidePartyNames(){ return isCustoms() || state.role==='sctl'; }
 function ownerAgentLabel(c){
+  if(hidePartyNames()) return ''; /* customs officers do not see who owns a job */
   const parts = [];
   if(c.owner) parts.push('Importer: '+c.owner);
   if(c.agent) parts.push('Agent: '+c.agent);
@@ -1324,6 +1329,7 @@ function genUniqueId(name){
 }
 function stageGroup(c){ return c.stageIdx>=13 ? 'delivered' : (c.stageIdx>=9 ? 'terminal' : 'cpc'); }
 
+function fixStageTime(t){ if(!t) return t; if(!isNaN(new Date(t))) return t; const x=String(t).slice(0,24); return isNaN(new Date(x)) ? t : x; }
 function normalizeContainer(c){
   const merged = Object.assign({
     invoices:[], deliveryLocation:null, sealNumber:null, sealNumberDelivery:null, sealMismatch:false,
@@ -1337,6 +1343,7 @@ function normalizeContainer(c){
       dutyPaymentRef:null, dutyPaymentDate:null, otherExpenses:[], sonRemitaAmount:0, sonRemitaRef:null
     }, c.financial||{})
   });
+  if(Array.isArray(merged.history)) merged.history = merged.history.map(h=>h && h.t ? Object.assign({}, h, {t:fixStageTime(h.t)}) : h);
   return merged;
 }
 function computeDuplicateFlags(){ /* the server works this out across every terminal and sends the flag with each job — this terminal can no longer see the other terminals' jobs */ }
@@ -1416,7 +1423,19 @@ function _seenKey(){ return 'ct-seen-notes-'+(state.userId||state.person||'x'); 
 function _loadSeen(){ try{ const raw = localStorage.getItem(_seenKey()); if(raw!==null) return JSON.parse(raw)||{}; }catch(e){} return __seenMem[_seenKey()] || null; }
 function _saveSeen(m){ __seenMem[_seenKey()] = m; try{ localStorage.setItem(_seenKey(), JSON.stringify(m)); }catch(e){} }
 function _noteKey(c,n){ return c.id+':'+(n.id || (n.date+'|'+n.by)); }
-function visibleNotes(c){ return (c.progressNotes||[]).filter(n=>n && (!n.staffOnly || canSeeStaffNotes())); }
+const CUSTOMS_ALERT_TYPES = ['DC Revenue','DC Valuation','T&T']; /* the only alerts Customs sees */
+function myAlerts(c){ if(isTransport()) return []; return (c.alerts||[]).filter(a=>!isCustoms() || CUSTOMS_ALERT_TYPES.includes(a.type)); }
+function noteRoleOfName(name){ const u=(state.users||[]).find(x=>x.name===name); if(!u) return null; return u.role==='admin'?'staff':u.role; }
+/* Every comment belongs to one section: customs, importer, agent, or staff (internal). Replies stay in their parent's section. */
+function noteAudience(c,n){
+  if(!n) return 'staff';
+  if(['customs','importer','agent','staff'].includes(n.audience)) return n.audience;
+  if(n.staffOnly) return 'staff';
+  if(n.replyTo){ const p=(c.progressNotes||[]).find(x=>x&&x.id===n.replyTo); if(p && p!==n) return noteAudience(c,p); }
+  const r=noteRoleOfName(n.by); return (r==='customs'||r==='importer'||r==='agent')?r:'staff';
+}
+function noteVisibleToMe(c,n){ if(isSCTL()) return false; if(isStaff()) return true; return noteAudience(c,n)===state.role; }
+function visibleNotes(c){ return (c.progressNotes||[]).filter(n=>n && noteVisibleToMe(c,n)); }
 function unreadNotes(c){ const seen = _loadSeen()||{}; return visibleNotes(c).filter(n=>n.by!==state.person && !seen[_noteKey(c,n)]); }
 function markNotesSeen(c){ const seen = _loadSeen()||{}; visibleNotes(c).forEach(n=>{ seen[_noteKey(c,n)] = 1; }); _saveSeen(seen); }
 function noteBadgeHTML(c){ const n = unreadNotes(c).length; return n ? `<span class="msg-flag" title="${n} new message${n===1?'':'s'} on this job">💬 ${n}</span>` : ''; }
@@ -1949,6 +1968,7 @@ function openProfile(uid){
   const perms = permissionsFor(u);
   const idOptions = Array.from(new Set((ID_TYPE_OPTIONS[u.role]||[]).concat(Object.values(ID_TYPE_OPTIONS).flat(), u.idType?[u.idType]:[]))).filter(t=>t!=='Other').concat('Other');
   const canPickDept = canEditAll && u.role==='admin' && uid!==state.userId;
+  const limited = !canEditAll; /* everyone else may only change their picture and ID card */
   document.getElementById('modal-content').innerHTML = `
     <div class="modal-head">
       <div style="display:flex; gap:14px; align-items:center;">
@@ -1959,20 +1979,20 @@ function openProfile(uid){
     </div>
     <div class="modal-body">
       ${editingOther && canEditAll ? `<div class="bol-card"><h4>Editing as ${isSCTL()?'SCTL Super Admin':'Terminal Admin'}</h4><p style="font-size:12.5px;">You can correct anything on this profile — name, email, phone, department, and the ID document they uploaded. Changes apply immediately.</p></div>` : ''}
-      <div class="field"><label>Full name</label><input type="text" id="p-name" value="${jobEsc(u.name)}" ${canEditAll?'':'disabled'}></div>
+      ${limited?'<p class="hint" style="margin-bottom:10px;">You can add or change your profile picture and ID card here. Your name, sign-in email, phone and other details are changed by your terminal Admin (or SCTL).</p>':`<div class="field"><label>Full name</label><input type="text" id="p-name" value="${jobEsc(u.name)}" ${canEditAll?'':'disabled'}></div>
       ${!canEditAll?`<p class="hint">Name cannot be changed here since it links your existing jobs. Contact your Terminal Admin (or SCTL, for a new-terminal account) for a name correction.</p>`:''}
       <div class="field"><label>Email or username (used to sign in)</label><input type="text" id="p-login" value="${jobEsc(u.login)}" ${(canEditAll && editingOther)?'':'disabled'}></div>
       <div class="field"><label>Phone number</label><input type="tel" id="p-phone" value="${jobEsc(u.phone||'')}"></div>
       ${u.role!=='sctl' && u.role!=='customs' ? `<div class="field"><label>Company / Organisation</label><input type="text" id="p-org" value="${jobEsc(u.org||'')}"></div>` : ''}
       ${canPickDept ? `<div class="field"><label>Department</label><select id="p-dept">${DEPARTMENTS.map(d=>`<option ${d===u.department?'selected':''}>${d}</option>`).join('')}</select></div>` : ''}
-      <div class="field"><label>Currently stationed at</label><select id="p-station">${STATIONS.map(s=>`<option ${s===u.stationedAt?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label>Currently stationed at</label><select id="p-station">${STATIONS.map(s=>`<option ${s===u.stationedAt?'selected':''}>${s}</option>`).join('')}</select></div>`}
 
       <div class="section-title">Picture and ID card</div>
       ${(u.idFileId||u.idImage) ? `<img class="idcard-preview" ${u.idFileId?`data-id-file="${u.idFileId}"`:`src="${u.idImage}"`} style="max-width:100%;border-radius:10px;margin-bottom:8px;">` : `<div class="tag-line" style="margin-bottom:8px;">No ID card image on file.</div>`}
       <p class="tag-line" style="margin-bottom:8px;">${u.profilePic ? 'The profile picture below is shown on this account.' : ((u.idImage||u.idFileId) ? 'No separate profile picture yet, so the ID card is shown as the picture. Add a photo to replace it.' : 'Add a photo so people can recognise this account.')}</p>
       <div class="field"><label>Profile picture (photo)</label><input type="file" id="p-pic" accept="image/*"></div>
       ${!editingOther ? `<div class="field"><label>${(u.idImage||u.idFileId)?'Replace the ID card image':'Upload an ID card image'}</label><input type="file" id="p-idcard" accept="image/*"></div>` : ''}
-      ${u.role!=='sctl' ? `
+      ${(u.role!=='sctl' && !limited) ? `
       <div class="field"><label>Type of ID document</label><select id="p-idtype" ${canEditAll?'':'disabled'}><option value="">Not stated</option>${idOptions.map(t=>`<option ${t===u.idType?'selected':''}>${jobEsc(t)}</option>`).join('')}</select></div>
       <div class="field"><label>Name of the uploaded document</label><input type="text" id="p-idfile" value="${jobEsc(u.idFileName||'')}" ${canEditAll?'':'disabled'} placeholder="e.g. Employee ID card"></div>` : ''}
       <button class="btn" onclick="saveProfile()">Save changes</button>
@@ -2023,7 +2043,7 @@ async function saveProfile(){
   if(canEditAll){ u.name = val('p-name') || u.name; }
   u.phone = val('p-phone') || u.phone;
   if(val('p-org')!==null) u.org = val('p-org') || u.org;
-  u.stationedAt = document.getElementById('p-station').value;
+  { const st = document.getElementById('p-station'); if(st) u.stationedAt = st.value; }
   if(canEditAll && document.getElementById('p-dept') && u.role==='admin'){ const d = document.getElementById('p-dept').value; if(DEPARTMENTS.includes(d)) u.department = d; }
   if(canEditAll && document.getElementById('p-idtype')){ u.idType = document.getElementById('p-idtype').value || u.idType; u.idFileName = val('p-idfile') || u.idFileName; }
   const picFile = document.getElementById('p-pic') && document.getElementById('p-pic').files[0];
@@ -2114,8 +2134,8 @@ function buildNav(){
     return nav;
   }
   if(state.role==='sctl'){
-    return [['dashboard','Global Dashboard'],['terminals','Terminal Management'],['accounts','Accounts'],['alljobs','All Jobs'],['verification','Verification Queue'],['archive','Archive'],
-      ['reports','Performance Reports'],['finance','Reconciliation'],['activity','Activity Log'],['settings','Platform Settings']];
+    return [['dashboard','Global Dashboard'],['terminals','Terminal Management'],['accounts','Accounts'],['alljobs','All Jobs'],['directory','Terminal Directory'],['verification','Verification Queue'],['archive','Archive'],
+      ['reports','Performance Reports'],['finance','Reconciliation'],['referrals','Referrals'],['support','Support'],['activity','Activity Log'],['settings','Platform Settings']];
   }
   if(state.role==='customs'){
     return [['dashboard','Mother Port Movements'],['directory','Terminal Directory'],['search','Container / BOL Search'],['comments','Comments']];
@@ -2125,11 +2145,12 @@ function buildNav(){
   if(can('bol')) nav.push(['bol','Book of Life']);
   if(state.settings.features.endToEnd) nav.push(['endtoend','End to End']);
   if(canSeeFinance()) nav.push(['finance','Financial Reconciliation']);
-  nav.push(['alerts','Alerts']);
+  if(!isTransport()) nav.push(['alerts','Alerts']);
   if(can('archiveView')) nav.push(['archive','Archive']);
   nav.push(['reports','Performance Reports']);
   if(state.settings.features.support) nav.push(['support','Support']);
-  nav.push(['activity','Activity Log']);
+  if(!isTransport()) nav.push(['activity','Activity Log']);
+  if(state.department==='Admin' && state.settings.features.referrals) nav.push(['referrals','Referrals']);
   if(state.department==='Admin') nav.push(['staff','Staff Directory']);
   if(state.department==='Admin') nav.push(['verification','Verification Queue']);
   return nav;
@@ -2202,12 +2223,15 @@ function renderTab(){
     else if(state.activeTab==='terminals') body = sctlTerminalsHTML();
     else if(state.activeTab==='accounts') body = sctlAccountsHTML();
     else if(state.activeTab==='alljobs') body = sctlAllJobsHTML();
+    else if(state.activeTab==='directory') body = customsDirectoryHTML();
     else if(state.activeTab==='verification') body = verificationHTML();
     else if(state.activeTab==='reports') body = reportsHTML();
     else if(state.activeTab==='activity') body = activityLogHTML();
     else if(state.activeTab==='archive') body = archiveHTML();
     else if(state.activeTab==='finance') body = sctlFinanceHTML();
     else if(state.activeTab==='settings') body = sctlSettingsHTML();
+    else if(state.activeTab==='referrals') body = referralsAdminHTML();
+    else if(state.activeTab==='support') body = supportHTML();
   } else if(state.role==='customs'){
     if(state.activeTab==='dashboard') body = customsMotherportHTML();
     else if(state.activeTab==='directory') body = customsDirectoryHTML();
@@ -2225,6 +2249,7 @@ function renderTab(){
     else if(state.activeTab==='activity') body = activityLogHTML();
     else if(state.activeTab==='archive') body = archiveHTML();
     else if(state.activeTab==='staff') body = staffHTML();
+    else if(state.activeTab==='referrals') body = referralsAdminHTML();
     else if(state.activeTab==='verification') body = verificationHTML();
   }
   main.innerHTML = holdBanner + body;
@@ -2238,7 +2263,7 @@ function jobListHTML(list, opts){
   if(list.length===0) return `<div class="empty-state"><div class="glyph">// //</div>No containers to show.</div>`;
   const sorted = [...list].sort((a,b)=> activeAlertCount([b]) - activeAlertCount([a]) || a.stageIdx-b.stageIdx);
   return sorted.map(c=>{
-    const alerts = c.alerts.filter(a=>a.status==='active');
+    const alerts = myAlerts(c).filter(a=>a.status==='active');
     const stage = STAGES[c.stageIdx];
     const pillClass = c.stageIdx>=13 ? 'done' : (alerts.length? 'wait':'ok');
     let colText;
@@ -2250,14 +2275,24 @@ function jobListHTML(list, opts){
     if((state.role==='importer'||state.role==='agent') && docsNeedingFix(c).length) statusHtml = '<span class="flag">Document rejected</span>';
     if(c.steppedDown.status) statusHtml = `<span class="pill stepped">Stepped down</span>`;
     const dupBadge = c.duplicateFlag ? `<span class="flag" style="margin-left:4px;" title="Also registered by ${c.duplicateFlag.terminalNames.join(', ')}">DUPLICATE</span>` : '';
-    return `<div class="job-row" data-cnum="${c.containerNumber.toLowerCase()}" data-bol="${c.billOfLading.toLowerCase()}" data-owner="${c.owner||''}" data-agent="${c.agent||''}" data-alert="${alerts.length?1:0}" data-dup="${c.duplicateFlag?1:0}" data-stage="${c.stageIdx}" data-stagegroup="${c.steppedDown.status?'stepped':stageGroup(c)}" onclick="openContainer('${c.id}')">
+    return `<div class="job-row" data-cnum="${c.containerNumber.toLowerCase()}" data-bol="${c.billOfLading.toLowerCase()}" data-owner="${hidePartyNames()?'':(c.owner||'')}" data-agent="${hidePartyNames()?'':(c.agent||'')}" data-alert="${alerts.length?1:0}" data-dup="${c.duplicateFlag?1:0}" data-stage="${c.stageIdx}" data-stagegroup="${c.steppedDown.status?'stepped':stageGroup(c)}" onclick="openContainer('${c.id}')">
       <div class="cnum">${c.containerNumber}${dupBadge}${noteBadgeHTML(c)}</div>
-      <div><div>${c.item}</div><div class="bol">${c.billOfLading} · ${c.size}${(c.eta||c.arrivedDate)?' · '+etaHTML(c):''}${!c.bolComplete?' · <span style=\'color:#8F6F22\'>DTI assessment pending</span>':''}${c.transporter&&c.transporter.name?` · <span class="mono" style="font-size:10px;">Transporter: ${c.transporter.name}</span>`:''}</div></div>
+      <div><div>${c.item}</div><div class="bol">${c.billOfLading} · ${c.size}${(!isCustoms()&&(c.eta||c.arrivedDate))?' · '+etaHTML(c):''}${(!c.bolComplete&&!isCustoms())?' · <span style=\'color:#8F6F22\'>DTI assessment pending</span>':''}${c.transporter&&c.transporter.name?` · <span class="mono" style="font-size:10px;">Transporter: ${c.transporter.name}</span>`:''}</div>${opts.showReturn?emptyReturnLineHTML(c):''}</div>
       <div class="stage-lbl">${stage.label}</div>
       <div class="owner">${colText}</div>
       <div>${statusHtml}</div>
     </div>`;
   }).join('');
+}
+function emptyReturnLineHTML(c){
+  if(c.stageIdx<12 && !c.returnedDate && !c.leftTerminalDate) return '';
+  const info = demurrageCalc(c.returnDueDate||'', c.leftTerminalDate||journeyDay(c,[12,13]), c.returnedDate||journeyDay(c,[14]));
+  let txt, col='var(--ink-soft,#6b6b6b)';
+  if(info.ret){ txt='Empty container returned to the wharf '+fmtDay(info.ret)+(info.state==='incurred'?' — demurrage: '+plural(info.late,'day')+' late':(info.state==='none'?' — no demurrage':'')); if(info.state==='incurred') col='#b3261e'; }
+  else if(info.state==='running'){ txt='Empty container not yet returned — overdue, demurrage running ('+plural(info.late,'day')+')'; col='#b3261e'; }
+  else if(info.due){ txt='Empty container not yet returned — due back by '+fmtDay(info.due); }
+  else txt='Empty container not yet returned — return-by date not recorded';
+  return `<div class="tag-line" style="color:${col};margin-top:2px;">${txt}</div>`;
 }
 function filterJobRows(q){
   q = (q||'').trim().toLowerCase();
@@ -2325,7 +2360,35 @@ function threadKeyFor(){
   if(state.role==='importer' || state.role==='agent') return 'client:'+state.person;
   return null;
 }
+function sctlSupportHTML(){
+  const terms = (state.terminals||[]).filter(t=>t.status==='active');
+  if(!terms.length) return '<div class="topbar"><div><h1>Support</h1></div></div><div class="panel"><div class="panel-body"><div class="tag-line">No active terminals yet.</div></div></div>';
+  let key = (state.supportThreadKey && String(state.supportThreadKey).startsWith('sctl:') && terms.some(t=>'sctl:'+t.id===state.supportThreadKey)) ? state.supportThreadKey : 'sctl:'+terms[0].id;
+  const msgs = state.messages.filter(m=>m.channel===key);
+  return `
+    <div class="topbar"><div><h1>Support</h1><div class="desc">Message the staff of any bonded terminal directly — attach a file or take a photo if needed.</div></div></div>
+    <div class="detail-grid">
+      <div>
+        <div class="panel"><div class="panel-head"><h3>${jobEsc(terminalName(key.slice(5)))}</h3></div>
+          <div class="panel-body">
+            <div id="thread-msgs" style="max-height:380px; overflow-y:auto; margin-bottom:14px;">
+              ${msgs.length? msgs.map(m=>msgBubbleHTML(m)).join('') : '<div class="tag-line">No messages with this terminal yet.</div>'}
+            </div>
+            <textarea id="msg-text" rows="2" placeholder="Type a message to this terminal's staff…"></textarea>
+            ${attachBoxHTML('msg')}
+            <button class="btn small" style="margin-top:8px;" onclick="sendMessage('${key}')">Send</button>
+          </div></div>
+      </div>
+      <div>
+        <div class="panel"><div class="panel-head"><h3>Terminals</h3></div>
+          <div class="panel-body">
+            ${terms.map(t=>`<div class="thread-item ${key==='sctl:'+t.id?'active':''}" onclick="openThread('sctl:${t.id}')"><b>${jobEsc(t.name)}</b><div class="tag-line">${state.messages.filter(m=>m.channel==='sctl:'+t.id).length} message(s)</div></div>`).join('')}
+          </div></div>
+      </div>
+    </div>`;
+}
 function supportHTML(){
+  if(isSCTL()) return sctlSupportHTML();
   if(state.role==='importer' || state.role==='agent'){
     const key = threadKeyFor();
     const msgs = state.messages.filter(m=>m.channel===key);
@@ -2336,7 +2399,7 @@ function supportHTML(){
           ${msgs.length? msgs.map(m=>msgBubbleHTML(m)).join('') : '<div class="tag-line">No messages yet. Say hello to your terminal staff.</div>'}
         </div>
         <textarea id="msg-text" rows="2" placeholder="Type a message…"></textarea>
-        <div class="field" style="margin-top:8px;"><label>Attach a document (optional)</label><input type="file" id="msg-file"></div>
+        ${attachBoxHTML('msg')}
         <button class="btn small" onclick="sendMessage('${key}')">Send</button>
       </div></div>`;
   }
@@ -2358,7 +2421,7 @@ function supportHTML(){
             </div>
             <textarea id="msg-text" rows="2" placeholder="Type a message…"></textarea>
             ${tagUIHTML(activeThread)}
-            <div class="field" style="margin-top:8px;"><label>Attach a document (optional)</label><input type="file" id="msg-file"></div>
+            ${attachBoxHTML('msg')}
             <button class="btn small" onclick="sendMessage('${activeThread}')">Send</button>
           </div></div>
       </div>
@@ -2367,6 +2430,7 @@ function supportHTML(){
           <div class="panel-body">
             <div class="thread-item ${activeThread===internalKey?'active':''}" onclick="openThread('${internalKey}')"><b>Internal Staff Chat</b><div class="tag-line">Coordinate with your own terminal's team</div></div>
             <div class="thread-item ${activeThread==='customs:'+state.terminalId?'active':''}" onclick="openThread('customs:${state.terminalId}')"><b>Customs (Mother Port)</b><div class="tag-line">WACT / OMT liaison</div></div>
+            <div class="thread-item ${activeThread==='sctl:'+state.terminalId?'active':''}" onclick="openThread('sctl:${state.terminalId}')"><b>SCTL (platform support)</b><div class="tag-line">Message the SCTL super admin</div></div>
             ${uniqueClients.map(name=>`<div class="thread-item ${activeThread==='client:'+name?'active':''}" onclick="openThread('client:${name}')"><b>${name}</b><div class="tag-line">Importer / agent</div></div>`).join('')}
           </div></div>
       </div>
@@ -2385,8 +2449,7 @@ function openThread(key){ state.supportThreadKey = key; renderTab(); }
 async function sendMessage(channel){
   const textEl = document.getElementById('msg-text');
   const text = textEl ? textEl.value.trim() : '';
-  const fileInput = document.getElementById('msg-file');
-  const file = fileInput && fileInput.files && fileInput.files[0];
+  const file = pickedAttach('msg');
   if(!text && !file){ toast('Type a message or attach a file first.'); return; }
   let up = null;
   if(file){
@@ -2419,8 +2482,46 @@ function referralsHTML(){
       <div class="panel-body">
         ${mine.length===0? '<div class="tag-line">No referrals submitted yet.</div>' :
           mine.map(r=>`<div class="action-item"><div class="txt"><b>${r.referredName}</b><div class="tag-line">${r.referredContact} · ${fmtDate(r.date)}</div></div>
-            <span class="pill ${r.status==='rewarded'?'ok':(r.status==='approved'?'wait':'done')}">${r.status}</span></div>`).join('')}
+            <span class="pill ${r.status==='rewarded'?'ok':(r.status==='approved'?'wait':(r.status==='declined'?'danger':'done'))}">${r.status}</span></div>`).join('')}
       </div></div>`;
+}
+function referralsAdminHTML(){
+  const all = isSCTL() ? state.referrals : state.referrals.filter(r=>r.terminalId===state.terminalId);
+  const list = all.slice().sort((a,b)=>new Date(b.date)-new Date(a.date));
+  const n = st=>list.filter(r=>r.status===st).length;
+  const pill = st=>`<span class="pill ${st==='rewarded'?'ok':(st==='approved'?'wait':(st==='declined'?'danger':'done'))}">${st}</span>`;
+  const acts = r=>{
+    const b=(st,label,cls)=>`<button class="btn small ${cls||'secondary'}" onclick="setReferralStatus('${r.id}','${st}')">${label}</button>`;
+    if(r.status==='pending') return b('approved','Approve','')+' '+b('declined','Decline');
+    if(r.status==='approved') return b('rewarded','Mark rewarded','')+' '+b('declined','Decline');
+    return b('pending','Reopen');
+  };
+  return `
+    <div class="topbar"><div><h1>Referrals</h1><div class="desc">${isSCTL()?'Referrals submitted by importers, agents and staff across all terminals.':'Referrals submitted by your importers, agents and staff. Review each one, approve it, then mark it rewarded once the discount or commission is given.'}</div></div></div>
+    <div class="metric-row">
+      <div class="metric"><div class="num">${list.length}</div><div class="lbl">Total referrals</div></div>
+      <div class="metric"><div class="num">${n('pending')}</div><div class="lbl">Awaiting review</div></div>
+      <div class="metric"><div class="num">${n('approved')}</div><div class="lbl">Approved</div></div>
+      <div class="metric"><div class="num">${n('rewarded')}</div><div class="lbl">Rewarded</div></div>
+    </div>
+    <div class="panel"><div class="panel-head"><h3>All referrals</h3></div>
+      <div class="panel-body">
+        ${list.length===0 ? '<div class="tag-line">No referrals have been submitted yet.</div>' :
+          list.map(r=>`<div class="action-item" style="align-items:flex-start;gap:12px;flex-wrap:wrap;"><div class="txt" style="min-width:0;flex:1 1 240px;">
+            <b>${jobEsc(r.referredName)}</b> <span class="tag-line">${jobEsc(r.referredContact)}</span>
+            <div class="tag-line">Referred by <b>${jobEsc(r.referrerName)}</b> (${jobEsc(r.referrerRole||'')}) · ${fmtDate(r.date)}${isSCTL()&&r.terminalId?` · ${jobEsc(terminalName(r.terminalId))}`:''}</div>
+            ${r.note?`<div class="tag-line">“${jobEsc(r.note)}”</div>`:''}</div>
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">${pill(r.status)} ${acts(r)}</div></div>`).join('')}
+      </div></div>`;
+}
+async function setReferralStatus(id,status){
+  const r = state.referrals.find(x=>x.id===id); if(!r) return;
+  if(!isSCTL() && !(state.department==='Admin' && r.terminalId===state.terminalId)){ toast('You cannot change this referral.'); return; }
+  r.status = status;
+  if(!(await saveReferrals())) return;
+  await pushLog(`Referral from ${r.referrerName} (${r.referredName}) marked ${status} by ${state.person}`, null, r.terminalId||state.terminalId||null);
+  toast('Referral '+status+'.');
+  renderApp();
 }
 async function submitReferral(){
   const name = document.getElementById('ref-name').value.trim();
@@ -2428,7 +2529,7 @@ async function submitReferral(){
   const note = document.getElementById('ref-note').value.trim();
   if(!name || !contact){ toast('Enter the referred party name and contact.'); return; }
   const type = state.role==='importer' ? 'importer_discount' : (state.role==='agent' ? 'agent_discount' : 'staff_commission');
-  state.referrals.push({id:'r'+Date.now(), referrerName:state.person, referrerRole:state.role, referredName:name, referredContact:contact, type, note, status:'pending', date:new Date().toISOString()});
+  state.referrals.push({id:'r'+Date.now(), referrerName:state.person, referrerRole:state.role, referredName:name, referredContact:contact, type, note, status:'pending', terminalId:(state.terminalId||(userById(state.userId)||{}).terminalId||null), date:new Date().toISOString()});
   await saveReferrals();
   toast('Referral submitted.');
   renderTab();
@@ -2439,27 +2540,42 @@ function computePendingTasks(){
   const list = state.containers.filter(c=>c.terminalId===state.terminalId && !c.steppedDown.status);
   const tasks = [];
   const dept = state.department;
-  if(dept==='Documentation' || dept==='Accountant' || dept==='Admin'){
-    list.filter(c=>!c.transferLetterNumber).forEach(c=>tasks.push({text:`${c.containerNumber} is missing a transfer letter number`, id:c.id}));
+  const adm = dept==='Admin';
+  const add = (d,c,text)=>tasks.push({dept:d, text:`${c.containerNumber} ${text}`, id:c.id});
+  const lastMove = c=>{ const h=(c.history||[]).slice(-1)[0]; const t=h?new Date(h.t).getTime():NaN; return isNaN(t)?null:t; };
+  const DAY=86400000, now=Date.now();
+  if(adm || dept==='Documentation'){
+    list.filter(c=>!c.transferLetterNumber).forEach(c=>add('Documentation',c,'is missing a transfer letter number'));
+    list.filter(c=>!c.eta && c.stageIdx<9).forEach(c=>add('Documentation',c,'has no ETA recorded'));
+    list.filter(c=>!c.arrivedDate && c.stageIdx>=9).forEach(c=>add('Documentation',c,'is past clearance but has no arrival date recorded'));
   }
-  if(dept==='DTI' || dept==='Admin'){
-    list.filter(c=>!c.bolComplete).forEach(c=>tasks.push({text:`${c.containerNumber} is awaiting DTI assessment`, id:c.id}));
+  if(adm || dept==='DTI'){
+    list.filter(c=>!c.bolComplete).forEach(c=>add('DTI',c,'is awaiting DTI assessment'));
   }
-  if(dept==='Operations' || dept==='Admin'){
-    list.filter(c=>c.stageIdx>=10 && !c.sealNumber).forEach(c=>tasks.push({text:`${c.containerNumber} passed examination but has no seal number recorded`, id:c.id}));
-    list.filter(c=>c.stageIdx>=11 && !c.exitNumber).forEach(c=>tasks.push({text:`${c.containerNumber} was released but has no exit number recorded`, id:c.id}));
-    list.filter(c=>c.stageIdx>=9 && !c.placementActual).forEach(c=>tasks.push({text:`${c.containerNumber} is at the terminal but has no recorded placement`, id:c.id}));
+  if(adm || dept==='Operations'){
+    list.filter(c=>c.stageIdx>=10 && !c.sealNumber).forEach(c=>add('Operations',c,'has no seal number recorded'));
+    list.filter(c=>c.stageIdx>=11 && !c.exitNumber).forEach(c=>add('Operations',c,'was released but has no exit number recorded'));
+    list.filter(c=>c.stageIdx>=9 && !c.placementActual).forEach(c=>add('Operations',c,'is at the terminal but has no recorded placement'));
+    list.filter(c=>c.stageIdx>=14 && !c.returnedDate).forEach(c=>add('Operations',c,'is marked Returned Empty but has no empty-container return date'));
   }
-  if(dept==='Transport' || dept==='Admin'){
-    list.filter(c=>c.stageIdx===13 && !c.deliveryLocation).forEach(c=>tasks.push({text:`${c.containerNumber} is out for delivery but has no delivery location on file`, id:c.id}));
-    list.filter(c=>c.stageIdx>=12 && !c.loadingDateTime).forEach(c=>tasks.push({text:`${c.containerNumber} needs a loading date/time recorded`, id:c.id}));
+  if(adm || dept==='Transport'){
+    list.filter(c=>c.stageIdx===13 && !c.deliveryLocation).forEach(c=>add('Transport',c,'is out for delivery but has no delivery location on file'));
+    list.filter(c=>c.stageIdx>=12 && !c.loadingDateTime).forEach(c=>add('Transport',c,'needs a loading date/time recorded'));
   }
-  if(dept==='Accountant' || dept==='Admin'){
-    list.filter(c=>c.financial.dutyStatus==='pending' && c.stageIdx>=9).forEach(c=>tasks.push({text:`${c.containerNumber} at the terminal still has duty pending`, id:c.id}));
-    list.forEach(c=>(c.invoices||[]).filter(i=>i.status==='pending').forEach(()=>tasks.push({text:`${c.containerNumber} has an invoice awaiting Admin approval`, id:c.id})));
+  if(adm || dept==='Accountant'){
+    list.filter(c=>c.financial.dutyStatus==='pending' && c.stageIdx>=9).forEach(c=>add('Accountant',c,'at the terminal still has duty pending'));
+    list.filter(c=>c.stageIdx>=13 && c.financial.dutyStatus!=='paid').forEach(c=>add('Accountant',c,'has been delivered but its reconciliation is still pending'));
+    list.forEach(c=>(c.invoices||[]).filter(i=>i.status==='pending').forEach(()=>add('Admin',c,'has an invoice awaiting Admin approval')));
   }
-  if(dept==='Admin'){
-    list.filter(c=>c.duplicateFlag).forEach(c=>tasks.push({text:`${c.containerNumber} is flagged as a duplicate registration — review with the other terminal`, id:c.id}));
+  if(adm){
+    state.referrals.filter(r=>r.terminalId===state.terminalId && r.status==='pending').forEach(r=>tasks.push({dept:'Admin', text:`Referral of ${r.referredName} by ${r.referrerName} is awaiting review`, id:null, tab:'referrals'}));
+    list.filter(c=>c.duplicateFlag).forEach(c=>add('Admin',c,'is flagged as a duplicate registration — review with the other terminal'));
+    /* nobody has moved the job for a while: who should act next */
+    list.filter(c=>c.stageIdx<14).forEach(c=>{ const t=lastMove(c); if(t && now-t>1*DAY){
+      const d=Math.floor((now-t)/DAY);
+      const who = c.stageIdx<=8 ? 'Documentation' : (c.stageIdx>=12 ? 'Transport' : 'Operations');
+      add(who,c,`has not moved for ${d} day${d===1?'':'s'} (stage ${c.stageIdx+1}: ${STAGES[c.stageIdx].code})`);
+    }});
   }
   return tasks;
 }
@@ -2476,14 +2592,27 @@ function adminDashboardHTML(){
     <div class="topbar"><div><h1>${terminalName(state.terminalId)} — Terminal Dashboard</h1><div class="desc">Active jobs at your bonded terminal. Stepped-down jobs are recorded permanently in End to End.</div></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">${isTerminalAdmin()?`<button class="btn secondary" onclick="openRegisterClient()">+ Register importer / agent</button>`:''}${canSeeFenBol()?`<button class="btn" onclick="switchTab('fen')">+ Register new job</button>`:''}</div></div>
 
+    <div class="metric-row">
+      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('all');}"><div class="num">${list.length}</div><div class="lbl">Active jobs</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('cpc')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('cpc');}"><div class="num">${inCPC}</div><div class="lbl">In CPC processing</div></div>
+      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('terminal')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('terminal');}"><div class="num">${atTerminal}</div><div class="lbl">At the terminal</div></div>
+      ${isTransport()?'':`      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('alerts')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('alerts');}"><div class="num">${alerts}</div><div class="lbl">Active alerts</div></div>`}
+    </div>
+    <div class="jump-row">
+      ${tasks.length?`<button class="btn small secondary" onclick="dashJump('dash-tasks')">⚠ Pending tasks (${tasks.length})</button>`:''}
+      ${state.department?`<button class="btn small secondary" onclick="dashJump('dash-inbox')">${state.department==='Admin'?'All departments — handover inbox':'Department inbox'}${inbox.length?` (${inbox.length})`:''}</button>`:''}
+      <button class="btn small secondary" onclick="dashJump('dash-jobs')">Active jobs (${list.length})</button>
+    </div>
     ${pwResetPanelHTML()}
+    <div id="dash-tasks"></div>
     ${tasks.length ? `
     <div class="panel inbox-panel">
-      <div class="panel-head"><h3>⚠ Pending tasks for ${state.department}</h3><span class="tag-line">${tasks.length} outstanding</span></div>
-      <div class="panel-body">${tasks.slice(0,8).map(t=>`<div class="inbox-row"><span>${t.text}</span><button class="btn small secondary" onclick="openContainer('${t.id}')">Open</button></div>`).join('')}
-      ${tasks.length>8?`<div class="tag-line">+ ${tasks.length-8} more…</div>`:''}</div>
+      <div class="panel-head"><h3>⚠ Pending tasks for ${state.department}</h3><span class="tag-line">${tasks.length} outstanding${state.department==='Admin'?' · all departments':''}</span></div>
+      <div class="panel-body">${tasks.map((t,i)=>`<div class="inbox-row task-row${i>=8?' task-extra':''}" ${i>=8&&!window.__tasksOpen?'hidden':''}><span>${state.department==='Admin'?`<span class="dept-chip">${t.dept}</span>`:''}${t.text}</span><button class="btn small secondary" onclick="${t.id?`openContainer('${t.id}')`:`switchTab('${t.tab}')`}">Open</button></div>`).join('')}
+      ${tasks.length>8?`<button class="btn small secondary" id="tasks-more" onclick="toggleTasks()">${window.__tasksOpen?'Show fewer':`+ ${tasks.length-8} more…`}</button>`:''}</div>
     </div>` : ''}
 
+    <div id="dash-inbox"></div>
     ${state.department ? `
     <div class="panel inbox-panel">
       <div class="panel-head"><h3>${state.department==='Admin'?'All departments — handover inbox':state.department+' department inbox'}</h3><span class="tag-line">${inbox.length} item(s) waiting</span></div>
@@ -2494,16 +2623,10 @@ function adminDashboardHTML(){
       </div>
     </div>` : ''}
 
-    <div class="metric-row">
-      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('all')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('all');}"><div class="num">${list.length}</div><div class="lbl">Active jobs</div></div>
-      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('cpc')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('cpc');}"><div class="num">${inCPC}</div><div class="lbl">In CPC processing</div></div>
-      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('terminal')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('terminal');}"><div class="num">${atTerminal}</div><div class="lbl">At the terminal</div></div>
-      <div class="metric metric-link" role="button" tabindex="0" onclick="dashFilter('alerts')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();dashFilter('alerts');}"><div class="num">${alerts}</div><div class="lbl">Active alerts</div></div>
-    </div>
-    <div class="panel">
+    <div class="panel" id="dash-jobs">
       <div class="panel-head"><h3>Active jobs</h3>
         <div class="toolbar">
-          <select id="f-status" onchange="applyAdminFilters()"><option value="all">All statuses</option><option value="cpc">In CPC</option><option value="terminal">At terminal</option><option value="delivered">Delivered</option><option value="alerts">With active alerts</option></select>
+          <select id="f-status" onchange="applyAdminFilters()"><option value="all">All statuses</option><option value="cpc">In CPC</option><option value="terminal">At terminal</option><option value="delivered">Delivered</option>${isTransport()?'':'<option value="alerts">With active alerts</option>'}</select>
           <select id="f-owner-filter" onchange="applyAdminFilters()"><option value="all">All owners</option>${owners.map(o=>`<option>${o}</option>`).join('')}</select>
           <select id="f-agent-filter" onchange="applyAdminFilters()"><option value="all">All agents</option>${agents.map(a=>`<option>${a}</option>`).join('')}</select>
           <input type="text" id="job-search" placeholder="Search container, BOL…" oninput="applyAdminFilters()">
@@ -2512,6 +2635,13 @@ function adminDashboardHTML(){
       <div class="panel-body" style="padding:0 18px;" id="job-list">${jobListHTML(list)}</div>
     </div>`;
 }
+function toggleTasks(){
+  window.__tasksOpen = !window.__tasksOpen;
+  document.querySelectorAll('.task-extra').forEach(e=>{ e.hidden=!window.__tasksOpen; });
+  const b=document.getElementById('tasks-more'); const n=document.querySelectorAll('.task-extra').length;
+  if(b) b.textContent = window.__tasksOpen ? 'Show fewer' : '+ '+n+' more…';
+}
+function dashJump(id){ const el=document.getElementById(id); if(el) el.scrollIntoView({behavior:'smooth',block:'start'}); }
 async function ackLog(id){
   const l = state.log.find(x=>x.id===id);
   const key = state.department==='Admin' ? 'Admin' : state.department;
@@ -2542,7 +2672,7 @@ function fenHTML(){
             <select id="f-owner">${importers.map(u=>`<option value="${u.name}">${u.name} — ${u.org}</option>`).join('') || '<option value="">No importers registered at this terminal yet</option>'}</select></div>
           <div class="field" id="f-agent-field" style="display:none;"><label>Clearing Agent *</label>
             <select id="f-agent">${agents.map(u=>`<option value="${u.name}">${u.name} — ${u.org}</option>`).join('') || '<option value="">No agents registered at this terminal yet</option>'}</select></div>
-          <div class="field"><label>Processing charge (₦)</label><input type="number" id="f-processing" value="0"></div>
+          <div class="field"><label>Processing charge (₦)</label><input type="number" id="f-processing" min="0" step="any" placeholder="Amount (₦)"></div>
         </div>
         <button class="btn" type="submit">Save to First Entry Note</button>
         <p class="hint">If this container number or Bill of Lading is already registered at another bonded terminal, it will be flagged for both terminals — but the job will still be created and can move ahead.</p>
@@ -2624,13 +2754,14 @@ function bolHTML(){
 }
 function bolReferenceNumbersListHTML(list){
   if(list.length===0) return '<div class="empty-state" style="padding:20px;">No jobs registered yet.</div>';
-  return list.map(c=>`<div class="job-row" style="grid-template-columns:120px 1fr 1fr 1fr 1fr 1fr;" onclick="openContainer('${c.id}')">
+  return list.map(c=>`<div class="job-row" style="grid-template-columns:120px 1fr 1fr 1fr 1fr 1fr 1fr;" onclick="openContainer('${c.id}')">
     <div class="cnum">${c.containerNumber}</div>
     <div class="tag-line">TL: ${c.transferLetterNumber||'—'}</div>
     <div class="tag-line mono">SON: ${jobEsc(sonRemitaRefOf(c))||'—'}</div>
     <div class="tag-line">Inv: ${c.invoiceNumber||'—'}</div>
     <div class="tag-line mono">A: ${c.aNumber||'—'} C: ${c.cNumber||'—'}</div>
     <div class="tag-line">Exit: ${c.exitNumber||'—'}</div>
+    <div class="tag-line mono">Seal: ${jobEsc(c.sealNumber)||'—'}</div>
   </div>`).join('');
 }
 function bolPendingListHTML(list){
@@ -2688,7 +2819,7 @@ function financeHTML(){
     if(flt==='profit' && !(p>0)) return false;
     if(flt==='loss' && !(p<0)) return false;
     if(flt==='even' && p!==0) return false;
-    if(q && !(`${c.containerNumber} ${c.billOfLading} ${c.owner||''} ${c.agent||''}`.toLowerCase().includes(q))) return false;
+    if(q && !(`${c.containerNumber} ${c.billOfLading} ${hidePartyNames()?'':(c.owner||'')} ${hidePartyNames()?'':(c.agent||'')}`.toLowerCase().includes(q))) return false;
     return true;
   });
   const sum = f => list.reduce((s,c)=>s+f(c),0);
@@ -2734,7 +2865,7 @@ function finJobRowHTML(c, adding, sect){
     const p = jobProfitOf(c), others = (c.financial.otherExpenses||[]);
     return `<div style="border-bottom:1px solid var(--line,#E4E0D2);padding:12px 0;">
       <div style="display:grid;grid-template-columns:minmax(110px,1fr) repeat(2,minmax(90px,1fr)) minmax(120px,1.2fr) auto;gap:8px;align-items:center;">
-        <div><div class="cnum">${jobEsc(c.containerNumber)}</div><div class="tag-line">${jobEsc(ownerAgentLabel(c))}</div><div class="tag-line">📅 Registered ${fmtDate(c.createdAt)}</div>${deliveredOn(c)?`<div class="tag-line">🚚 Delivered ${fmtDate(deliveredOn(c))}</div>`:''}</div>
+        <div><div class="cnum">${jobEsc(c.containerNumber)}</div><div class="tag-line"><b>${jobEsc(c.size||'—')}</b> · ${jobEsc(c.item||'—')}</div><div class="tag-line">📍 ${jobEsc(c.deliveryLocation||c.destination||'—')}</div><div class="tag-line">${jobEsc(ownerAgentLabel(c))}</div><div class="tag-line">📅 Registered ${fmtDate(c.createdAt)}</div>${deliveredOn(c)?`<div class="tag-line">🚚 Delivered ${fmtDate(deliveredOn(c))}</div>`:''}</div>
         <div class="tag-line">Processing charge<br><b>${c.financial.processingCharge?fmtNaira(c.financial.processingCharge):'—'}</b></div>
         <div class="tag-line">Total expenses<br><b>${jobExpensesOf(c)?fmtNaira(jobExpensesOf(c)):'—'}</b></div>
         <div><span class="pill ${p>0?'ok':(p<0?'stepped':'wait')}">${plLabel(p)}</span></div>
@@ -2754,7 +2885,7 @@ function renderFinRows(){
   const list = state.containers.filter(c=>c.terminalId===state.terminalId && c.financial && !c.financial.summaryOnly).filter(c=>{
     const p = jobProfitOf(c);
     if(flt==='profit' && !(p>0)) return false; if(flt==='loss' && !(p<0)) return false; if(flt==='even' && p!==0) return false;
-    return !q || `${c.containerNumber} ${c.billOfLading} ${c.owner||''} ${c.agent||''}`.toLowerCase().includes(q);
+    return !q || `${c.containerNumber} ${c.billOfLading} ${hidePartyNames()?'':(c.owner||'')} ${hidePartyNames()?'':(c.agent||'')}`.toLowerCase().includes(q);
   });
   el.innerHTML = finRowsHTML(list, state.finAdd);
   const an = document.getElementById('fin-annual-body'); if(an) an.innerHTML = finAnnualHTML(list);
@@ -2829,7 +2960,23 @@ function adminAlertsHTML(){
 }
 
 /* ========================= PERFORMANCE REPORTS ========================= */
+function reportsBottleneckOnlyHTML(){
+  const list = state.containers.filter(c=>c.terminalId===state.terminalId);
+  const stageCounts = {};
+  list.forEach(c=>{ if(c.stageIdx<13 && !c.steppedDown.status){ const k=STAGES[c.stageIdx].code; stageCounts[k]=(stageCounts[k]||0)+1; } });
+  const maxStage = Math.max(1, ...Object.values(stageCounts), 0);
+  return `
+    <div class="topbar"><div><h1>Performance Reports</h1><div class="desc">Where jobs are sitting right now.</div></div></div>
+    <div class="panel"><div class="panel-head"><h3>Bottleneck — jobs currently sitting per stage</h3></div>
+      <div class="panel-body">
+        ${Object.keys(stageCounts).length===0 ? '<div class="tag-line">No jobs in progress.</div>' :
+          Object.entries(stageCounts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`
+          <div class="bar-row"><div class="bar-label"><span>${k}</span><span>${v}</span></div>
+            <div class="bar-track"><div class="bar-fill amber" style="width:${(v/maxStage*100).toFixed(0)}%"></div></div></div>`).join('')}
+      </div></div>`;
+}
 function reportsHTML(){
+  if(isTransport()) return reportsBottleneckOnlyHTML();
   const list = isSCTL() ? state.containers : state.containers.filter(c=>c.terminalId===state.terminalId);
   const delivered = list.filter(c=>c.stageIdx>=13 && !c.steppedDown.status);
   const avgTat = delivered.length ? Math.round(delivered.reduce((s,c)=>s+daysBetween(c.createdAt),0)/delivered.length) : 0;
@@ -2848,7 +2995,7 @@ function reportsHTML(){
   const maxStage = Math.max(1, ...Object.values(stageCounts), 0);
 
   const agentCounts = {};
-  list.forEach(c=>{ const key = c.agent || 'No agent (direct import)'; agentCounts[key]=(agentCounts[key]||0)+1; });
+  list.forEach(c=>{ const key = hidePartyNames() ? (c.agent ? 'Handled through an agent' : 'No agent (direct import)') : (c.agent || 'No agent (direct import)'); agentCounts[key]=(agentCounts[key]||0)+1; });
   const maxAgent = Math.max(1, ...Object.values(agentCounts), 0);
 
   return `
@@ -3407,11 +3554,43 @@ function deptStagesFor(dept, terminalId){
 }
 function allowedStagesFor(dept){
   if(isSCTL() || dept==='Admin') return ALL_STAGE_IDX;
-  const g = me().grants; if(g && Array.isArray(g.stages)) return g.stages;
-  return deptStagesFor(dept, state.terminalId);
+  const g = me().grants;
+  let base = (g && Array.isArray(g.stages)) ? g.stages : deptStagesFor(dept, state.terminalId);
+  if(dept==='Accountant') base = Array.from(new Set(base.concat([6,7,8,9,10,11,12,13,14]))); /* the Accountant may always move a job from MPT-LOAD to Returned Empty */
+  return base;
 }
 
 /* ========================= CONTAINER DETAIL MODAL ========================= */
+function fmtFull(iso){ const d=new Date(iso); if(isNaN(d)) return '—'; return d.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'})+', '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}); }
+function fmtSpan(ms){
+  if(ms==null || isNaN(ms) || ms<0) return '—';
+  const m = Math.floor(ms/60000); if(m<60) return Math.max(m,0)+' min';
+  const h = Math.floor(m/60); if(h<48) return h+' h '+(m%60)+' min';
+  const d = Math.floor(h/24); return d+' d '+(h%24)+' h';
+}
+/* Every stage with the time the job reached it and how long it stayed — no day limits; the date, time and how long it stayed. */
+function stageTimelineHTML(c){
+  const hist = (c.history||[]).filter(h=>h && h.t).map(h=>Object.assign({},h,{t:fixStageTime(h.t)})).filter(h=>!isNaN(new Date(h.t))).slice().sort((a,b)=>new Date(a.t)-new Date(b.t));
+  const now = Date.now();
+  const startT = hist.length ? new Date(hist[0].t).getTime() : null;
+  const endE = hist.filter(h=>h.stage===14).slice(-1)[0];
+  const totalHTML = (startT && endE) ? `<div class="tag-line" style="margin-top:4px;"><b>Total processing time: ${fmtSpan(new Date(endE.t).getTime()-startT)}</b> (from registration to empty container returned)</div>` : (startT ? `<div class="tag-line" style="margin-top:4px;">Processing so far: ${fmtSpan(now-startT)}</div>` : '');
+  const rows = STAGES.map((st,i)=>{
+    const es = hist.filter(h=>h.stage===i);
+    if(!es.length){
+      return `<div class="history-row" style="opacity:.55;"><div class="dot"></div><div style="flex:1;"><div class="t">${i+1}. ${st.code}</div><span class="tag-line">${i<c.stageIdx?'Passed — time not recorded':'Not reached yet'}</span>${i===14?totalHTML:''}</div></div>`;
+    }
+    const first = es[0], last = es[es.length-1];
+    const nextEntry = hist.find(h=>new Date(h.t) > new Date(last.t) && h.stage!==i);
+    const current = (i===c.stageIdx);
+    const end = nextEntry ? new Date(nextEntry.t).getTime() : (current && i<14 ? now : null);
+    const span = end!=null ? end - new Date(first.t).getTime() : null;
+    return `<div class="history-row"><div class="dot"></div><div style="flex:1;min-width:0;"><div class="t">${i+1}. ${st.code} — ${st.label}${current?' · <b>current</b>':''}</div>
+      <span class="tag-line"><b>${fmtFull(first.t)}</b>${first.user?' · by '+jobEsc(first.user):''}${first.skipped?' · jumped over':''}</span>
+      ${span!=null?`<div class="tag-line">${current?'In this stage for ':'Stayed '}${fmtSpan(span)}</div>`:''}${i===14?totalHTML:''}</div></div>`;
+  }).join('');
+  return `<div class="section-title">Stage timestamps — monitor delays</div><div class="tag-line" style="margin-bottom:6px;">The date and time the job reached each of the 15 stages, who moved it, and how long it stayed.</div>${rows}`;
+}
 function stageRailHTML(idx, plainLabels){
   return `<div class="rail-wrap"><div class="rail">${STAGES.map((s,i)=>{
     const cls = i<idx? 'complete' : (i===idx?'current':'');
@@ -3496,6 +3675,7 @@ async function completeBol(id){
   const cc = document.getElementById('bol-c').value.trim();
   if(!a || !cc){ toast('A-Number and C-Number are both required.'); return; }
   c.aNumber = a; c.cNumber = cc; c.bolComplete = true;
+  const sealIn = (document.getElementById('bol-seal')||{value:''}).value.trim(); if(sealIn) c.sealNumber = sealIn;
   if(!(await saveContainers(state.containers))) return;
   await pushLog(`${c.containerNumber}: DTI assessment complete (A:${a} / C:${cc}) by ${state.person}`, 'Documentation', c.terminalId);
   toast(`${c.containerNumber} Book of Life numbers saved.`);
@@ -3515,8 +3695,10 @@ async function updateStage(id){
     if(!confirm('Stage progression looks out of sequence. Continue anyway?')) return;
   }
   const wasZero = c.stageIdx===0;
+  const nowIso = new Date().toISOString();
+  for(let sk=c.stageIdx+1; sk<idx; sk++) c.history.push({stage:sk, t:nowIso, user:state.person, skipped:true}); /* stages jumped over still get a date and time */
   c.stageIdx = idx;
-  c.history.push({stage:idx, t:new Date().toISOString(), user: state.person});
+  c.history.push({stage:idx, t:nowIso, user: state.person});
   if(wasZero && idx>0 && !c.transireSubmittedDate) c.transireSubmittedDate = new Date().toISOString();
   if(idx===13 && !c.deliveredDate) c.deliveredDate = new Date().toISOString();
   if(idx===12 && !c.detentionStart) c.detentionStart = new Date().toISOString();
@@ -3574,21 +3756,14 @@ async function recordTransportHandover(id){
   toast('Handover recorded.');
   openContainer(id);
 }
-async function saveSealNumber(id, when){
+async function saveBolSeal(id){
   const c = byId(id);
-  const el = document.getElementById(when==='exam'?'seal-exam':'seal-delivery');
-  const val = el.value.trim();
-  if(when==='exam') c.sealNumber = val || null;
-  else c.sealNumberDelivery = val || null;
-  if(c.sealNumber && c.sealNumberDelivery){
-    c.sealMismatch = c.sealNumber !== c.sealNumberDelivery;
-    if(c.sealMismatch && !c.alerts.some(a=>a.type==='DSS' && a.status==='active')){
-      c.alerts.push({id:'a'+Date.now(), type:'DSS', desc:`Seal recorded at examination (${c.sealNumber}) does not match the seal recorded at delivery (${c.sealNumberDelivery}).`, status:'active', dateDetected:new Date().toISOString()});
-    }
-  }
+  if(!c || !myScopeMatches(c) || !can('seal')){ toast('You do not have access to record the seal number.'); return; }
+  const val = ((document.getElementById('seal-bol')||{}).value||'').trim();
+  c.sealNumber = val || null;
   if(!(await saveContainers(state.containers))) return;
-  await pushLog(`Seal number (${when}) recorded for ${c.containerNumber} by ${state.person}: ${val}`, 'Operations', c.terminalId);
-  toast(c.sealMismatch ? 'DSS detected — alert raised.' : 'Seal number saved.');
+  await pushLog(`Seal number recorded for ${c.containerNumber} by ${state.person}: ${val||'cleared'}`, 'Documentation', c.terminalId);
+  toast('Seal number saved.');
   openContainer(id); renderApp();
 }
 async function savePlacementInstruction(id){
@@ -3687,15 +3862,27 @@ function newNoteId(){ return 'n'+Date.now()+Math.random().toString(16).slice(2,6
 function canSeeStaffNotes(){ return (isStaff()||isSCTL()); }
 function canAddNote(c){ return myScopeMatches(c) || ((state.role==='importer'||state.role==='agent'||state.role==='customs') && !!c); } // importers and agents can reply to comments on their own jobs
 function progressNotesHTML(c){
-  const all = (c.progressNotes||[]).map((n,i)=>Object.assign({_i:i},n)).filter(n=>!n.staffOnly || canSeeStaffNotes());
-  if(!all.length) return '<div class="tag-line">No delay notes recorded.</div>';
+  const all = (c.progressNotes||[]).map((n,i)=>Object.assign({_i:i,_aud:noteAudience(c,n)},n)).filter(n=>noteVisibleToMe(c,n));
+  if(isSCTL()) return '';
+  const staffView = isStaff();
+  const LABEL = {customs:'Customs comments', importer:'Importer comments', agent:'Agent comments', staff:'Staff only (internal)'};
   const isTop = n => !n.replyTo || !all.some(p=>p.id===n.replyTo);
   const row = (n, reply) => `<div class="history-row" style="${reply?'margin-left:26px;':''}"><div class="dot"></div><div style="flex:1;min-width:0;">
-      <div class="t">${fmtDateTime(n.date)}${n.staffOnly?' <span class="flag">STAFF ONLY</span>':''}${reply?' · reply':''}</div>${jobEsc(n.text)}
+      <div class="t">${fmtDateTime(n.date)}${reply?' · reply':''}</div>${jobEsc(n.text)}${n.fileId?`<div class="tag-line" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">📎 ${docEsc(n.fileName||'file')}<button class="btn small ghost" onclick="viewNoteFile('${c.id}','${n.id}')">View</button><button class="btn small secondary" onclick="downloadNoteFile('${c.id}','${n.id}')">Download</button></div>`:''}
       <div class="tag-line">— ${jobEsc(n.by)}${n.edited?' · <i>edited</i>':''}${canAddNote(c)?` · <a href="#" onclick="startNoteReply('${c.id}',${n._i});return false;">Reply</a>`:''}${ownNote(c,n)?` · <a href="#" onclick="startNoteEdit('${c.id}',${n._i});return false;">Edit</a> · <a href="#" style="color:var(--rust);" onclick="confirmDeleteNote('${c.id}',${n._i});return false;">Delete</a>`:''}</div>
       <div id="reply-box-${n._i}"></div></div></div>`;
-  return all.filter(isTop).reverse().map(n=> row(n,false) + all.filter(r=>r.replyTo && r.replyTo===n.id).map(r=>row(r,true)).join('')).join('');
+  const sec = k => { const mine = all.filter(n=>n._aud===k);
+    return mine.filter(isTop).reverse().map(n=>{ const out=[]; const walk=id=>mine.filter(r=>r.replyTo===id).forEach(r=>{ out.push(r); walk(r.id); }); walk(n.id); return row(n,false)+out.map(r=>row(r,true)).join(''); }).join(''); };
+  if(!staffView){
+    const body = sec(state.role);
+    return body || '<div class="tag-line">No comments yet.</div>';
+  }
+  const keys = ['customs','importer','agent','staff'].filter(k => all.some(n=>n._aud===k) || k==='customs' || k==='staff' || (k==='importer'&&c.owner) || (k==='agent'&&c.agent));
+  return keys.map(k=>`<div class="tag-line" style="font-weight:700;margin:12px 0 4px;text-transform:uppercase;letter-spacing:.04em;">${LABEL[k]} (${all.filter(n=>n._aud===k&&isTop(n)).length})</div>${sec(k)||'<div class="tag-line">No comments in this section yet.</div>'}`).join('');
 }
+function noteOf(cid,nid){ const c=byId(cid); return c && (c.progressNotes||[]).find(n=>n.id===nid); }
+function viewNoteFile(cid,nid){ const n=noteOf(cid,nid); if(n && n.fileId) viewStoredFile(n.fileId, n.fileName); }
+function downloadNoteFile(cid,nid){ const n=noteOf(cid,nid); if(n && n.fileId) downloadStoredFile(n.fileId, n.fileName); }
 function startNoteReply(cid, i){
   const box = document.getElementById('reply-box-'+i); if(!box) return;
   state.editingJob = cid; // pause live refresh so the box is not wiped while typing
@@ -3711,7 +3898,7 @@ async function sendNoteReply(cid, i){
   if(!canAddNote(c)){ toast('You do not have permission to reply here.'); return; }
   if(!parent.id) parent.id = newNoteId();
   state.editingJob = null;
-  c.progressNotes.push({id:newNoteId(), text, by:state.person, date:new Date().toISOString(), replyTo:parent.id, staffOnly: !!parent.staffOnly});
+  c.progressNotes.push({id:newNoteId(), text, by:state.person, date:new Date().toISOString(), replyTo:parent.id, audience:noteAudience(c,parent), staffOnly: noteAudience(c,parent)==='staff'});
   if(!(await saveContainers(state.containers))) return;
   const author = state.users.find(u=>u.name===parent.by);
   const dept = author && author.department;
@@ -3726,11 +3913,23 @@ async function sendNoteReply(cid, i){
 }
 async function addProgressNote(id){
   const c = byId(id);
-  const text = document.getElementById('progress-note').value.trim();
-  if(!text){ toast((state.role==='importer'||state.role==='agent'||state.role==='customs')?'Type your comment first.':'Enter a comment explaining the delay first.'); return; }
+  let text = document.getElementById('progress-note').value.trim();
+  const file = pickedAttach('pn');
+  if(!text && !file){ toast((state.role==='importer'||state.role==='agent'||state.role==='customs')?'Type your comment first, or attach a file or photo.':'Enter a comment explaining the delay first, or attach a file or photo.'); return; }
+  let up = null;
+  if(file){
+    const badFile = checkPickedFile(file);
+    if(badFile){ toast(badFile); return; }
+    try{ up = await uploadFileToServer(file); }
+    catch(e){ if(e && e.status===401){ sessionExpired(); return; } showErrorBanner('Not added', e.message); return; }
+  }
+  if(!text) text = 'Attached: '+up.name;
   if(!c.progressNotes) c.progressNotes = [];
-  const so = document.getElementById('progress-staffonly');
-  c.progressNotes.push({id:newNoteId(), text, by:state.person, date:new Date().toISOString(), staffOnly: !!(so && so.checked)});
+  const audSel = document.getElementById('progress-aud');
+  const aud = (state.role==='customs'||state.role==='importer'||state.role==='agent') ? state.role : ((audSel&&audSel.value)||'staff');
+  const note = {id:newNoteId(), text, by:state.person, date:new Date().toISOString(), audience:aud, staffOnly: aud==='staff'};
+  if(up){ note.fileId = up.id; note.fileName = up.name; note.mime = up.mime; }
+  c.progressNotes.push(note);
   if(!(await saveContainers(state.containers))) return;
   await pushLog(`Progress note on ${c.containerNumber} by ${state.person}: ${text}`, null, c.terminalId);
   toast((state.role==='importer'||state.role==='agent'||state.role==='customs')?'Comment added. The terminal staff will see it.':'Comment added.');
@@ -3907,7 +4106,7 @@ function openContainer(id){
   const canEdit = myScopeMatches(c);
   const dept = state.department;
   const stage = STAGES[c.stageIdx];
-  const activeAlerts = c.alerts.filter(a=>a.status==='active');
+  const activeAlerts = myAlerts(c).filter(a=>a.status==='active'); /* transport staff do not see alerts */
   const detentionDays = c.detentionStart ? daysBetween(c.detentionStart) : null;
   const _tm = terminalById(c.terminalId)||{};
   const FREE_DAYS = _tm.freeDays!=null ? _tm.freeDays : state.settings.freeDays;
@@ -3926,10 +4125,10 @@ function openContainer(id){
   const html = `
     <div class="modal-head">
       <div>
-        <div class="tag-line mono" style="margin-bottom:4px;">${c.billOfLading} · ${c.size} · ${c.item} · ${terminalName(c.terminalId)}${(c.eta||c.arrivedDate)?' · '+etaHTML(c):''}</div>
+        <div class="tag-line mono" style="margin-bottom:4px;">${c.billOfLading} · ${c.size} · ${c.item} · ${terminalName(c.terminalId)}${(!isCustoms()&&(c.eta||c.arrivedDate))?' · '+etaHTML(c):''}</div>
         ${arrivalButtonHTML(c)}
         <h2 class="mono" style="font-size:22px;">${c.containerNumber}</h2>
-        <div class="tag-line">${ownerAgentLabel(c)} &nbsp;·&nbsp; Destination: ${c.destination}</div>
+        <div class="tag-line">${hidePartyNames()?'':ownerAgentLabel(c)+' &nbsp;·&nbsp; '}Destination: ${c.destination}</div>
       </div>
       <div style="display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap;justify-content:flex-end;">${jobActionButtons(c)}<button class="btn ghost" onclick="closeModal()">✕</button></div>
     </div>
@@ -3944,13 +4143,13 @@ function openContainer(id){
         ${canStepDown?`<button class="btn small secondary" style="margin-top:8px;" onclick="reactivateContainer('${c.id}')">Reactivate container</button>`:''}
       </div>` : ''}
 
-      <div class="section-title">Identification & reference numbers</div>
+      ${isTransport()?'':`<div class="section-title">Identification & reference numbers</div>
       <div class="kv"><b>BILBT transfer letter</b><span>
         ${canEditTransferLetter(c)?`<span style="display:flex; gap:6px;"><input type="text" id="transfer-letter" value="${c.transferLetterNumber||''}" placeholder="e.g. BBT/TR/24/OMT/003" style="max-width:220px;"><button class="btn small secondary" onclick="saveTransferLetter('${c.id}')">Save</button></span>`
           : `<span class="mono">${c.transferLetterNumber||'—'}</span>`}</span></div>
-      <div class="kv"><b>Invoice / charge number</b><span>
+      <div class="kv" style="${isCustoms()?'display:none':''}"><b>Invoice / charge number</b><span>
         ${canEditInvoiceNumber(c)?`<span style="display:flex; gap:6px;"><input type="text" id="invoice-number" value="${c.invoiceNumber||''}" placeholder="e.g. 18/OMT/1170" style="max-width:220px;"><button class="btn small secondary" onclick="saveInvoiceNumber('${c.id}')">Save</button></span>`
-          : `<span class="mono">${c.invoiceNumber||'—'}</span>`}</span></div>
+          : `<span class="mono">${isCustoms()?'':(c.invoiceNumber||'—')}</span>`}</span></div>
       <div class="kv"><b>A-Number</b><span class="mono">${c.aNumber||'—'}</span></div>
       <div class="kv"><b>C-Number</b><span class="mono">${c.cNumber||'—'}</span></div>
       <div class="kv"><b>SON Remita reference</b><span>
@@ -3959,8 +4158,11 @@ function openContainer(id){
       <div class="kv"><b>Exit number</b><span>
         ${canEditExitNumber(c) ?`<span style="display:flex; gap:6px;"><input type="text" id="exit-number" placeholder="e.g. X 1776" value="${jobEsc(c.exitNumber||'')}" onblur="var n=normalizeExit(this.value); if(n) this.value=n;" style="max-width:220px;"><button class="btn small secondary" onclick="saveExitNumber('${c.id}')">Save</button></span>`
           : `<span class="mono">${jobEsc(c.exitNumber)||'—'}</span>`}</span></div>
+      <div class="kv"><b>Seal number</b><span>
+        ${(canEdit && can('seal'))?`<span style="display:flex; gap:6px;"><input type="text" id="seal-bol" value="${jobEsc(c.sealNumber||'')}" placeholder="e.g. SL-48211" style="max-width:220px;"><button class="btn small secondary" onclick="saveBolSeal('${c.id}')">Save</button></span>`
+          : `<span class="mono">${jobEsc(c.sealNumber)||'—'}</span>`}</span></div>`}
 
-      <div class="section-title">Transporter / driver — recorded at Book of Life</div>
+      <div class="section-title">Transporter / driver</div>
       ${c.transporter ? `
       <div class="kv"><b>Current transporter</b><span>${c.transporter.name}</span></div>
       <div class="kv"><b>Phone</b><span class="mono">${c.transporter.phone||'—'}</span></div>
@@ -3992,12 +4194,13 @@ function openContainer(id){
 
       ${returnSectionHTML(c)}
 
-      ${!c.bolComplete ? `<div class="bol-card"><h4>Book of Life — DTI assessment pending</h4>
+      ${(!c.bolComplete && !isTransport() && !isCustoms()) ? `<div class="bol-card"><h4>Book of Life — DTI assessment pending</h4>
         <p style="font-size:12.5px;margin-bottom:8px;">DTI has not yet provided the A-Number and C-Number. CPC stages can continue as normal — but examination (stage 11) cannot begin until this is complete.</p>
         ${canEdit && can('bol') ? `
         <div class="form-grid">
           <div class="field" style="margin-bottom:6px;"><label>A-Number</label><input type="text" id="bol-a" placeholder="A-220000"></div>
           <div class="field" style="margin-bottom:6px;"><label>C-Number</label><input type="text" id="bol-c" placeholder="C-990000"></div>
+          <div class="field" style="margin-bottom:6px;"><label>Seal number (optional)</label><input type="text" id="bol-seal" placeholder="e.g. SL-48211"></div>
         </div>
         <button class="btn small" onclick="completeBol('${c.id}')">Save Book of Life numbers</button>` : ''}
       </div>` : ''}
@@ -4012,6 +4215,7 @@ function openContainer(id){
       <div class="section-title">Journey — Stage ${c.stageIdx+1} of 15 <span class="dept-chip" style="margin-left:8px;">${STAGE_DEPT[c.stageIdx]}</span></div>
       ${stageRailHTML(c.stageIdx, !isStaff())}
       <div class="stamp-badge" style="margin-top:8px;">${stage.code} · ${stage.label}</div>
+      ${stageTimelineHTML(c)}
       ${detentionDays!==null?`<div class="hint" style="margin-top:10px;">Free storage window: ${FREE_DAYS} days. Container released ${detentionDays} day(s) ago. ${detentionCost>0?`Projected detention so far: <b>${fmtNaira(detentionCost)}</b>.`:'Still within free period.'}</div>`:''}
 
       ${canStage ? `
@@ -4027,14 +4231,6 @@ function openContainer(id){
       <div class="section-title">Step down</div>
       <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;"><button class="btn small danger" onclick="showStepDownForm('${c.id}')">Step down container</button><span class="tag-line">Takes it out of active clearance. It can be reactivated later.</span></div>
       <div id="stepdown-form-area"></div>` : ''}
-
-      ${(c.stageIdx>=10 && canEdit && (dept==='Operations'||dept==='Admin')) ? `
-      <div class="section-title">Seal number (examination)</div>
-      <div style="display:flex; gap:8px;"><input type="text" id="seal-exam" value="${c.sealNumber||''}" placeholder="Seal number recorded at examination"><button class="btn small secondary" onclick="saveSealNumber('${c.id}','exam')">Save</button></div>` : (c.sealNumber?`<div class="kv"><b>Seal (examination)</b><span class="mono">${c.sealNumber}</span></div>`:'')}
-      ${(c.stageIdx>=12 && canEdit && (dept==='Transport'||dept==='Operations'||dept==='Admin')) ? `
-      <div class="section-title">Seal number (delivery)</div>
-      <div style="display:flex; gap:8px;"><input type="text" id="seal-delivery" value="${c.sealNumberDelivery||''}" placeholder="Seal number confirmed at delivery"><button class="btn small secondary" onclick="saveSealNumber('${c.id}','delivery')">Save</button></div>
-      ${c.sealMismatch?`<div class="hint" style="color:var(--rust); font-weight:600;">⚠ DSS — this container may have been tampered with.</div>`:''}` : ''}
 
       ${(canEdit && (dept==='Operations'||dept==='Admin')) ? `
       <div class="section-title">Container placement</div>
@@ -4076,13 +4272,15 @@ function openContainer(id){
         (c.deliveryLocation ? `<div class="tag-line">${jobEsc(c.deliveryLocation)}</div>`
           : `<div class="tag-line">${c.destination ? 'Destination registered with this job: <b>'+jobEsc(c.destination)+'</b>. The full delivery address has not been entered yet by the importer or agent.' : 'No delivery address has been entered yet.'}</div>`)}
 
-      <div class="section-title">Progress notes</div>
-      ${progressNotesHTML(c)}
+      ${isSCTL()?'':`<div class="section-title">Progress notes</div>
+      ${progressNotesHTML(c)}`}
       ${(state.role==='importer'||state.role==='agent'||state.role==='customs') ? `
         <textarea id="progress-note" rows="2" placeholder="Write a comment on this job's progress…" style="margin:8px 0;"></textarea>
-        <button class="btn small secondary" onclick="addProgressNote('${c.id}')">Add comment</button>` : canEdit?`
+        ${attachBoxHTML('pn')}
+        <button class="btn small secondary" style="margin-top:8px;" onclick="addProgressNote('${c.id}')">Add comment</button>` : canEdit?`
         <textarea id="progress-note" rows="2" placeholder="Explain a delay — e.g. transfer letter still with CPC, transire awaiting signature…" style="margin:8px 0;"></textarea>
-        ${canSeeStaffNotes()?'<label class="tag-line" style="display:block;margin-bottom:8px;"><input type="checkbox" id="progress-staffonly"> Staff only — hide from the importer and agent</label>':''}<button class="btn small secondary" onclick="addProgressNote('${c.id}')">Add comment</button>`:''}
+        ${attachBoxHTML('pn')}
+        ${canSeeStaffNotes()?`<div class="field" style="margin-bottom:8px;"><label>Which section is this comment for?</label><select id="progress-aud"><option value="staff">Staff only (internal)</option><option value="customs">Customs</option>${c.owner?'<option value="importer">Importer</option>':''}${c.agent?'<option value="agent">Agent</option>':''}</select></div>`:''}<button class="btn small secondary" onclick="addProgressNote('${c.id}')">Add comment</button>`:''}
 
       <div class="detail-grid" style="margin-top:22px;">
         <div>
@@ -4106,7 +4304,7 @@ function openContainer(id){
             </span></div>`).join('') || '<div class="tag-line">No invoices uploaded yet.</div>'}
           ${(canFinEdit)?`
             <div style="margin-top:12px;">
-              <div class="field" style="margin-bottom:8px;"><label>Invoice amount (₦)</label><input type="number" id="invoice-amount" value="0"></div>
+              <div class="field" style="margin-bottom:8px;"><label>Invoice amount (₦)</label><input type="number" id="invoice-amount" min="0" step="any" placeholder="Amount (₦)"></div>
               <div class="field" style="margin-bottom:8px;"><label>Choose invoice file</label><input type="file" id="invoice-file"></div>
               <button class="btn small secondary" onclick="uploadInvoice('${c.id}')">Upload invoice</button>
             </div>`:''}
@@ -4119,7 +4317,7 @@ function openContainer(id){
           <div class="section-title">Duty payment</div>
           ${c.financial.dutyStatus==='paid' ? `<div class="tag-line">Paid on ${fmtDate(c.financial.dutyPaymentDate)} · Ref: <span class="mono">${jobEsc(c.financial.dutyPaymentRef||'')}</span>. If something is wrong, correct it below and save again.</div>` : ''}
             <div class="form-grid">
-              <div class="field" style="margin-bottom:6px;"><label>Duty amount (₦)</label><input type="number" id="duty-amount" value="${c.financial.customsDuties||0}"></div>
+              <div class="field" style="margin-bottom:6px;"><label>Duty amount (₦)</label><input type="number" id="duty-amount" min="0" step="any" value="${c.financial.customsDuties?c.financial.customsDuties:''}" placeholder="Amount (₦)"></div>
               <div class="field" style="margin-bottom:6px;"><label>Payment reference</label><input type="text" id="duty-ref" value="${jobEsc(c.financial.dutyPaymentRef||'')}" placeholder="RCPT-00000"></div>
             </div>
             <button class="btn small" onclick="recordDutyPayment('${c.id}')">${c.financial.dutyStatus==='paid'?'Update duty payment':'Record duty payment'}</button>` : ''}
@@ -4419,7 +4617,7 @@ function sctlJobsFiltered(){
     if(f.status==='stepped' && !stepped) return false;
     if(f.status==='delivered' && !(st>=13 && !stepped)) return false;
     if((f.status==='cpc'||f.status==='terminal') && (stepped || stageGroup(c)!==f.status)) return false;
-    return !q || [c.containerNumber,c.billOfLading,c.item,c.owner,c.agent].join(' ').toLowerCase().includes(q);
+    return !q || [c.containerNumber,c.billOfLading,c.item,hidePartyNames()?'':c.owner,hidePartyNames()?'':c.agent].join(' ').toLowerCase().includes(q);
   });
 }
 function sctlJobsChange(){
@@ -4455,7 +4653,7 @@ function finAnnualHTML(all0){
   if(!list.length && !paidUndel.length) return '<div class="empty-state" style="padding:20px;">No delivered or paid jobs yet.</div>';
   const pu = paidUndel.length ? (()=>{ const t=finTotals(paidUndel); return `<div style="margin-bottom:10px;"><h4 style="margin:6px 0;">Paid, not yet delivered</h4>
     <div class="tag-line" style="margin-bottom:6px;">${t.n} job${t.n===1?'':'s'} · Charges <b>${fmtNaira(t.rev)}</b> · Expenses so far <b>${fmtNaira(t.exp)}</b> · <b style="color:${plColor(t.net)};">${plLabel(t.net)}</b></div>
-    ${paidUndel.map(c=>`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line,#E4E0D2);"><span><b class="mono">${jobEsc(c.containerNumber)}</b> <span class="tag-line">${jobEsc(ownerAgentLabel(c))} · registered ${fmtDate(c.createdAt)}</span></span><span>${fmtNaira(c.financial.processingCharge)} · ${plLabel(jobProfitOf(c))}</span></div>`).join('')}</div>`; })() : '';
+    ${paidUndel.map(c=>`<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line,#E4E0D2);"><span><b class="mono">${jobEsc(c.containerNumber)}</b> <span class="tag-line">${jobEsc(c.size||'')} · ${jobEsc(c.item||'')} · ${jobEsc(c.deliveryLocation||c.destination||'')} · ${jobEsc(ownerAgentLabel(c))} · registered ${fmtDate(c.createdAt)}</span></span><span>${fmtNaira(c.financial.processingCharge)} · ${plLabel(jobProfitOf(c))}</span></div>`).join('')}</div>`; })() : '';
   const years = {}; list.forEach(c=>{ const k=deliveredKey(c); const y=k.slice(0,4); ((years[y]=years[y]||{})[k]=years[y][k]||[]).push(c); });
   const cols = 'grid-template-columns:minmax(120px,1.4fr) repeat(4,minmax(80px,1fr));';
   const head = `<div class="tag-line" style="display:grid;${cols}gap:8px;padding:6px 0;border-bottom:1px solid var(--line,#E4E0D2);font-weight:600;"><span>Period</span><span>Jobs</span><span>Charges</span><span>Expenses</span><span>Profit / loss</span></div>`;
@@ -4552,7 +4750,7 @@ function archivedPanelHTML(){
 }
 function archRowHTML(c){
   const stage = STAGES[c.stageIdx] || STAGES[0];
-  return `<div class="arch-row" data-stepped="${c.steppedDown&&c.steppedDown.status?1:0}" data-deliv="${c.stageIdx>=13?1:0}" data-prog="${c.stageIdx<13?1:0}" data-q="${jobEsc([c.containerNumber,c.billOfLading,c.item,c.owner,c.agent,c.destination].join(' ').toLowerCase())}" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line,#e3e6dc);">
+  return `<div class="arch-row" data-stepped="${c.steppedDown&&c.steppedDown.status?1:0}" data-deliv="${c.stageIdx>=13?1:0}" data-prog="${c.stageIdx<13?1:0}" data-q="${jobEsc([c.containerNumber,c.billOfLading,c.item,hidePartyNames()?'':c.owner,hidePartyNames()?'':c.agent,c.destination].join(' ').toLowerCase())}" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:12px 0;border-bottom:1px solid var(--line,#e3e6dc);">
     <div style="min-width:220px;flex:1;"><div class="mono"><b>${jobEsc(c.containerNumber)}</b> ${c.steppedDown&&c.steppedDown.status?'<span class="pill stepped" style="margin-left:6px;">Stepped down</span>':''}</div>
       <div class="tag-line">${jobEsc(c.billOfLading)} · ${jobEsc(c.size)} · ${jobEsc(c.item)}</div>
       <div class="tag-line">At stage ${c.stageIdx+1}: ${jobEsc(stage.code)}${isSCTL()?' · '+jobEsc(terminalName(c.terminalId)):''}</div>
@@ -4588,6 +4786,18 @@ function archiveHTML(){
 /* ---- Stored files; rejecting a document; staff uploading on someone's behalf; re-uploading ---- */
 const FILE_EXTS = ['pdf','png','jpg','jpeg','webp','doc','docx','xls','xlsx','csv','txt'];
 const FILE_MAX_MB = 10;
+function attachBoxHTML(p){
+  return `<div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <label class="btn small secondary" style="cursor:pointer;margin:0;">📎 Attach a file<input type="file" id="${p}-file" style="display:none" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx,.csv,.txt,image/*" onchange="attachChosen('${p}')"></label>
+    <label class="btn small secondary" style="cursor:pointer;margin:0;">📷 Take a photo<input type="file" id="${p}-cam" accept="image/*" capture="environment" style="display:none" onchange="attachChosen('${p}')"></label>
+    <span class="tag-line" id="${p}-chosen"></span></div>`;
+}
+function pickedAttach(p){ const a=document.getElementById(p+'-file'), b=document.getElementById(p+'-cam'); return (b&&b.files&&b.files[0]) || (a&&a.files&&a.files[0]) || null; }
+function attachChosen(p){
+  const f = pickedAttach(p), el = document.getElementById(p+'-chosen'); if(!el) return;
+  el.innerHTML = f ? '✔ '+docEsc(f.name)+' ('+Math.max(1,Math.round(f.size/1024))+' KB) <a href="#" onclick="clearAttach(\''+p+'\');return false;">remove</a>' : '';
+}
+function clearAttach(p){ ['-file','-cam'].forEach(x=>{ const e=document.getElementById(p+x); if(e) e.value=''; }); attachChosen(p); }
 function docEsc(s){ return String(s==null?'':s).replace(/[&<>"']/g, ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch])); }
 function fileExt(n){ const m = /\.([A-Za-z0-9]+)$/.exec(n||''); return m ? m[1].toLowerCase() : ''; }
 function checkPickedFile(file){
@@ -4710,8 +4920,8 @@ function docRowHTML(c, d, i, ctx){
 }
 function documentsSectionHTML(c, ctx){
   const docs = c.documents||[];
-  const rows = docs.map((d,i)=>docRowHTML(c,d,i,ctx)).join('') || '<div class="tag-line">No documents uploaded yet.</div>';
-  const nFiles = docs.filter(d=>d.fileId).length;
+  const rows = docs.map((d,i)=>docShownToMe(d)?docRowHTML(c,d,i,ctx):'').join('') || '<div class="tag-line">No documents uploaded yet.</div>';
+  const nFiles = docs.filter(d=>d.fileId && docShownToMe(d)).length;
   const dlAll = nFiles ? `<div style="margin:6px 0 10px;"><button class="btn small secondary" onclick="downloadAllDocs('${c.id}')">⬇ Download all documents (${nFiles})</button></div>` : '';
   if(!(ctx.staff || ctx.client)) return dlAll + rows;
   let rp = null;
@@ -5056,7 +5266,7 @@ function customsDirectoryHTML(){
       </div></div>
     ${selected ? `
     <div class="panel"><div class="panel-head"><h3>${selected.name} — all job movements</h3></div>
-      <div class="panel-body" style="padding:0 18px;">${jobListHTML(list)}</div></div>` : ''}`;
+      <div class="panel-body" style="padding:0 18px;">${jobListHTML(list,{showReturn:true})}</div></div>` : ''}`;
 }
 function customsSearchHTML(){
   return `
@@ -5074,7 +5284,7 @@ function runCustomsSearch(){
   const matches = state.containers.filter(c=>c.containerNumber.toLowerCase().includes(q) || c.billOfLading.toLowerCase().includes(q));
   if(matches.length===0){ results.innerHTML = '<div class="empty-state"><div class="glyph">// //</div>No container or Bill of Lading matches that search.</div>'; return; }
   const terminalsFound = [...new Set(matches.map(m=>terminalName(m.terminalId)))];
-  results.innerHTML = `<div class="hint" style="margin-bottom:8px;">Registered with: <b>${terminalsFound.join(', ')}</b></div>` + jobListHTML(matches, {showTerminal:true});
+  results.innerHTML = `<div class="hint" style="margin-bottom:8px;">Registered with: <b>${terminalsFound.join(', ')}</b></div>` + jobListHTML(matches, {showTerminal:true, showReturn:true});
 }
 function customsCommentsHTML(){
   const active = state.custSelectedTerminal || (state.terminals[0] && state.terminals[0].id);
@@ -5091,7 +5301,7 @@ function customsCommentsHTML(){
               ${msgs.length? msgs.map(m=>msgBubbleHTML(m)).join('') : '<div class="tag-line">No messages with this terminal yet.</div>'}
             </div>
             <textarea id="msg-text" rows="2" placeholder="Type a message…" ${t?'':'disabled'}></textarea>
-            <div class="field" style="margin-top:8px;"><label>Attach a document (optional)</label><input type="file" id="msg-file" ${t?'':'disabled'}></div>
+            ${attachBoxHTML('msg')}
             <button class="btn small" onclick="sendMessage('${channel}')" ${t?'':'disabled'}>Send</button>
           </div></div>
       </div>

@@ -7,8 +7,9 @@ const FIELD_LABELS = {
   size: 'container size', item: 'cargo description', destination: 'destination',
   alerts: 'alerts', steppedDown: 'stepped-down status', deliveryLocation: 'delivery location',
   returnDueDate: 'return-by date', leftTerminalDate: 'date left the terminal', returnedDate: 'date returned to the wharf',
-  owner: 'importer', agent: 'clearing agent',
-  deleteRequest: 'deletion request', owner: 'importer', agent: 'clearing agent',
+  owner: 'importer', agent: 'clearing agent', deleteRequest: 'deletion request',
+  eta: 'ETA', arrivedDate: 'vessel arrival date', arrivedBy: 'vessel arrival record', financial: 'financial breakdown',
+  sealNumber: 'seal number', sealMismatch: 'seal check'
 };
 const labelOf = k => FIELD_LABELS[k] || k;
 
@@ -32,34 +33,34 @@ const RESTRICTED_CONTAINER_FIELDS = {
 };
 
 // What each department may do by default (the client's list). The terminal Admin can switch any of these on or off for one person.
+// The Accountant can do everything Documentation can, so it is listed wherever Documentation is.
 const CAP_DEPTS = {
-  fen: ['Admin', 'Documentation', 'DTI'],
-  bol: ['Admin', 'Documentation', 'DTI'],
-  alert: ['Admin', 'Documentation', 'DTI'],
-  stepDown: ['Admin', 'Documentation', 'DTI', 'Field Staff'],
-  exit: ['Admin', 'Documentation', 'DTI', 'Operations'],
-  transporter: ['Admin', 'Documentation', 'DTI', 'Transport'],
-  transferNo: ['Admin', 'Documentation', 'Operations'],
+  fen: ['Admin', 'Documentation', 'Accountant', 'DTI'],
+  bol: ['Admin', 'Documentation', 'Accountant', 'DTI'],
+  alert: ['Admin', 'Documentation', 'Accountant', 'DTI', 'Operations', 'Field Staff'],
+  stepDown: ['Admin', 'Documentation', 'Accountant', 'DTI', 'Field Staff', 'Operations'],
+  exit: ['Admin', 'Documentation', 'Accountant', 'DTI', 'Operations'],
+  transporter: ['Admin', 'Documentation', 'Accountant', 'DTI', 'Transport', 'Operations'],
+  transferNo: ['Admin', 'Documentation', 'Accountant', 'Operations'],
   invoiceNo: ['Admin', 'Accountant', 'DTI', 'Operations'],
-  deliveryLoc: ['Admin', 'Documentation', 'DTI', 'Transport'],
+  deliveryLoc: ['Admin', 'Documentation', 'Accountant', 'DTI', 'Transport', 'Operations'],
   finance: ['Admin', 'Accountant'],
-  archiveView: ['Admin', 'Documentation', 'DTI'],
+  archiveView: ['Admin', 'Documentation', 'Accountant', 'DTI', 'Operations'],
   archive: ['Admin'],
-  returnDates: ['Admin', 'Documentation', 'DTI', 'Transport']
+  returnDates: ['Admin', 'Documentation', 'Accountant', 'DTI', 'Transport', 'Operations'],
+  seal: ['Admin', 'Documentation', 'DTI', 'Operations']
 };
 const FIELD_CAPS = {
   containerNumber: 'fen', billOfLading: 'fen', size: 'fen', item: 'fen', destination: 'fen', owner: 'fen', agent: 'fen',
+  eta: 'fen', arrivedDate: 'fen', arrivedBy: 'fen',
   bolComplete: 'bol', aNumber: 'bol', cNumber: 'bol',
+  sealNumber: 'seal', sealMismatch: 'seal',
   alerts: 'alert', steppedDown: 'stepDown', exitNumber: 'exit',
   transporter: 'transporter', transportHistory: 'transporter',
   transferLetterNumber: 'transferNo', invoiceNumber: 'invoiceNo',
-  deliveryLocation: 'deliveryLoc', invoices: 'finance', archived: 'archive',
+  deliveryLocation: 'deliveryLoc', invoices: 'finance', financial: 'finance', archived: 'archive',
   returnDueDate: 'returnDates', leftTerminalDate: 'returnDates', returnedDate: 'returnDates',
-  deleteRequest: 'archiveView', owner: 'fen', agent: 'fen',
+  deleteRequest: 'archiveView'
 };
-
-Object.assign(FIELD_CAPS, { eta:'fen', arrivedDate:'fen', arrivedBy:'fen', financial:'finance', deleteRequest:'archiveView', owner:'fen', agent:'fen' });
-Object.assign(FIELD_LABELS, { eta:'ETA', arrivedDate:'vessel arrival date', arrivedBy:'vessel arrival record', financial:'financial breakdown', deleteRequest:'deletion request', owner:'importer', agent:'clearing agent' });
-for (const k of Object.keys(CAP_DEPTS)) if (CAP_DEPTS[k].includes('Documentation') && !CAP_DEPTS[k].includes('Accountant')) CAP_DEPTS[k] = CAP_DEPTS[k].concat('Accountant');
 
 module.exports = { FIELD_LABELS, labelOf, RESTRICTED_CONTAINER_FIELDS, CAP_DEPTS, FIELD_CAPS };

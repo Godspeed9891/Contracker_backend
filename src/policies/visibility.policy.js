@@ -7,8 +7,10 @@ const isAccountsUser = u => !!u && u.role === 'admin' && u.department === 'Accou
 
 function isStaffUser(u) { return !!u && (u.role === 'admin' || u.role === 'sctl'); }
 function isTopUser(u) { return isSctl(u); }
+const COMMENT_LOG_RE = /^(Progress note on|Comment on .* edited|A comment on .* deleted)/;
 function logVisibleTo(user, e) {
-  if (isSctl(user)) return !isFinanceLog(e);
+  if (isSctl(user)) return !isFinanceLog(e) && !COMMENT_LOG_RE.test(String(e.msg || ''));
+  if (user.role === 'admin' && user.department === 'Transport') return false;   // Transport staff do not see the Activity Log
   return user.role === 'admin' && e.terminalId === user.terminalId;
 }
 function userVisibleTo(user, u) {

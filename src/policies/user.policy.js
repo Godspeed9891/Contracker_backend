@@ -35,6 +35,15 @@ function protectedFieldChanged(oldU, newU) {
 
 const OWN_PROTECTED = "You cannot change your own account type, department, terminal, status or permissions.";
 
+const OWN_IDENTITY_KEYS = ['name', 'phone', 'login', 'email', 'org', 'stationedAt', 'uniqueId', 'idType', 'idFileName'];
+function identityChanged(oldU, newU) {
+  return OWN_IDENTITY_KEYS.some(k => {
+    if (looseEqual(oldU[k], newU[k], k)) return false;
+    if ((oldU[k] === undefined || oldU[k] === null) && (k === 'uniqueId' || USER_DEFAULTS[k] === newU[k])) return false;
+    return true;
+  });
+}
+
 function checkUsersWrite(oldArr, newArr, authUser) {
   oldArr = Array.isArray(oldArr) ? oldArr : [];
   if (!Array.isArray(newArr)) return "Malformed user list.";
@@ -83,6 +92,7 @@ function checkUsersWrite(oldArr, newArr, authUser) {
       if (id === authUser.id && oldU && newU && protectedFieldChanged(oldU, newU))
         return OWN_PROTECTED;
     }
+      if (identityChanged(oldU, newU)) return 'Your name, sign-in email, phone and other details are changed by your terminal Admin (or SCTL). You can change your profile picture and ID card.';
     return null;
   }
 
