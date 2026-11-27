@@ -2280,7 +2280,7 @@ function supportHTML(){
             <div class="thread-item ${activeThread===internalKey?'active':''}" onclick="openThread('${internalKey}')"><b>Internal Staff Chat</b><div class="tag-line">Coordinate with your own terminal's team</div></div>
             ${custThreads.length ? custThreads.map(ch=>`<div class="thread-item ${activeThread===ch?'active':''}" onclick="openThread(${JSON.stringify(ch).replace(/"/g,'&quot;')})"><b>Customs${ch.length>custPrefix.length+1?' — '+jobEsc(ch.slice(custPrefix.length+1)):' (earlier messages)'}</b><div class="tag-line">Mother Port liaison</div></div>`).join('') : `<div class="thread-item"><b>Customs (Mother Port)</b><div class="tag-line">A thread for each customs officer appears here once they write to you.</div></div>`}
             <div class="thread-item ${activeThread==='sctl:'+state.terminalId?'active':''}" onclick="openThread('sctl:${state.terminalId}')"><b>SCTL (platform support)</b><div class="tag-line">Message the SCTL super admin</div></div>
-            ${uniqueClients.map(name=>`<div class="thread-item ${activeThread==='client:'+name?'active':''}" onclick="openThread('client:${name}')"><b>${name}</b><div class="tag-line">Importer / agent</div></div>`).join('')}
+            ${uniqueClients.map(name=>`<div class="thread-item ${activeThread==='client:'+name?'active':''}" onclick="openThread(${JSON.stringify('client:'+name).replace(/"/g,'&quot;')})"><b>${name}</b><div class="tag-line">Importer / agent</div></div>`).join('')}
           </div></div>
       </div>
     </div>`;
@@ -2294,7 +2294,7 @@ function msgBubbleHTML(m){
     ${mine?`<div class="msg-meta" style="margin-top:4px;"><a href="#" onclick="startMsgEdit('${m.id}');return false;">Edit</a> · <a href="#" style="color:var(--rust);" onclick="confirmDeleteMsg('${m.id}');return false;">Delete</a></div>`:''}
   </div>`;
 }
-function openThread(key){ state.supportThreadKey = key; renderTab(); }
+function openThread(key){ state.supportThreadKey = key; renderTab(); setTimeout(()=>{ const el=document.getElementById('thread-msgs'); if(el){ el.scrollTop=el.scrollHeight; const p=el.closest('.panel'); if(p) p.scrollIntoView({block:'start',behavior:'smooth'}); } },30); }
 async function sendMessage(channel){
   const textEl = document.getElementById('msg-text');
   const text = textEl ? textEl.value.trim() : '';
