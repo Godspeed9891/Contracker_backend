@@ -3438,7 +3438,7 @@ function stageTimelineHTML(c){
       <span class="tag-line"><b>${fmtFull(first.t)}</b>${first.user?' · by '+jobEsc(first.user):''}${first.skipped?' · jumped over':''}</span>
       ${span!=null?`<div class="tag-line">${current?'In this stage for ':'Stayed '}${fmtSpan(span)}</div>`:''}${i===14?totalHTML:''}</div></div>`;
   }).join('');
-  return `<div class="section-title">Stage timestamps — monitor delays</div><div class="tag-line" style="margin-bottom:6px;">The date and time the job reached each of the 15 stages, who moved it, and how long it stayed.</div>${rows}`;
+  return `<div class="section-title">Stage timestamps — monitor delays</div><div class="tag-line" style="margin-bottom:6px;">The date and time the job reached each of the 15 stages, ${isCustoms() ? '' : 'who moved it, '}and how long it stayed.</div>${rows}`;
 }
 function stageRailHTML(idx, plainLabels){
   return `<div class="rail-wrap"><div class="rail">${STAGES.map((s,i)=>{
@@ -4115,12 +4115,12 @@ function openContainer(id){
       <button class="btn small secondary" onclick="recordTransportHandover('${c.id}')">Record handover</button>
       ${c.transportHandover?`<div class="tag-line" style="margin-top:6px;">Handed over to ${c.transportHandover.handedOverTo} (${c.transportHandover.contactPhone}) by ${c.transportHandover.by} on ${fmtDateTime(c.transportHandover.date)}</div>`:''}` : ''}
 
-      <div class="section-title">Delivery location</div>
+      ${isCustoms() ? '' : `<div class="section-title">Delivery location</div>
       ${(isImporterAgentOwner || (canEdit && can('deliveryLoc'))) ? `
         <div style="display:flex; gap:8px;"><input type="text" id="delivery-loc" value="${jobEsc(c.deliveryLocation||'')}" placeholder="Enter delivery address"><button class="btn small secondary" onclick="saveDeliveryLocation('${c.id}')">Save</button></div>
         ${!c.deliveryLocation && c.destination ? `<div class="tag-line" style="margin-top:6px;">Destination registered with this job: <b>${jobEsc(c.destination)}</b>. The full delivery address has not been entered yet.</div>` : ''}` :
         (c.deliveryLocation ? `<div class="tag-line">${jobEsc(c.deliveryLocation)}</div>`
-          : `<div class="tag-line">${c.destination ? 'Destination registered with this job: <b>'+jobEsc(c.destination)+'</b>. The full delivery address has not been entered yet by the importer or agent.' : 'No delivery address has been entered yet.'}</div>`)}
+          : `<div class="tag-line">${c.destination ? 'Destination registered with this job: <b>'+jobEsc(c.destination)+'</b>. The full delivery address has not been entered yet by the importer or agent.' : 'No delivery address has been entered yet.'}</div>`)}`}
 
       ${isSCTL()?'':`<div class="section-title">Progress notes</div>
       ${progressNotesHTML(c)}`}
@@ -5208,7 +5208,6 @@ function _paintBusy(msg){
   if(!wasOpen){
     el.querySelector('.busy-hint').textContent=''; el.querySelector('.busy-actions').style.display='none';
     clearTimeout(_busyHint1); clearTimeout(_busyHint2);
-    _busyHint1=setTimeout(()=>{ el.querySelector('.busy-hint').textContent='This is taking longer than usual. The server may be waking up, which can take up to a minute. Please keep this page open.'; },15000);
     _busyHint2=setTimeout(()=>{ el.querySelector('.busy-actions').style.display='block'; },60000);
   }
 }
